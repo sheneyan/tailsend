@@ -1,0 +1,5 @@
+/tailsend
+/tailsend.exe
+*.exe
+.DS_Store
+/dist/
