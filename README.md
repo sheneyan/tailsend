@@ -12,7 +12,7 @@ tailsend list
 tailsend send ./photo.jpg pixel:
 ```
 
-[中文说明](README.zh.md) · [Architecture](docs/architecture.md) · [Taildrop limits](docs/taildrop.md)
+[中文说明](README.zh.md) · [Architecture](docs/architecture.md) · [Taildrop limits](docs/taildrop.md) · [Desktop GUI](docs/desktop.md)
 
 > **Unofficial.** Not affiliated with [Tailscale](https://tailscale.com) or
 > [LocalSend](https://localsend.org). Taildrop is a Tailscale feature
@@ -60,31 +60,26 @@ binary onto your `PATH`.
 
 ### Desktop GUI
 
-Needs Go with CGO, and the platform WebView (macOS ships it; Windows needs
-WebView2).
+Needs Go with CGO and the platform WebView. **Always** use `-tags production`.
 
 ```bash
 git clone https://github.com/sheneyan/tailsend.git
 cd tailsend/desktop
-go build -tags production -o Tailsend .
+go build -tags production -o Tailsend .    # Windows: Tailsend.exe
 ./Tailsend
 ```
 
-On Apple Silicon / recent Xcode, if the linker complains about `UTType`, rebuild
-from the same directory (a Darwin-only link flag is already in the repo).
-```
+Without the tag the binary starts then exits: `will not build without the
+correct build tags`.
 
-Wails 必须带 `-tags production`（或开发时用 `-tags dev`），否则运行会报
-`will not build without the correct build tags`。
+Platform notes (PATH, winget, GOPROXY, WebView2, GTK, drag-and-drop):
+**[docs/desktop.md](docs/desktop.md)**.
 
-To rebuild the Vue UI (optional): `cd frontend && npm install && npm run build`.
-
-Packaging into `.app` / installer: install [Wails v2](https://wails.io) and run
-`wails build` in `desktop/`. Live reload: `wails dev`.
-
-The window lists named devices (no IP field). Drop or pick files, then click a
-device. **Pair phone** shows a QR of `tailsend list --json` for a future mobile
-app. **Inbox** drains the Linux-style Taildrop inbox into Downloads.
+The window lists named devices (no IP field). Add files (click, or drop onto
+the window), then click a device. After a send, the UI says where the file
+should land (Downloads vs Linux inbox commands). **Inbox** drains the
+Tailscale inbox. **Pair phone** is a QR of sendable targets for a later
+mobile app.
 
 ## Usage
 
@@ -146,6 +141,9 @@ the same place as **Share → Tailscale** or `tailscale file cp`.
 | device missing or “not a Taildrop target” | Tagged node, offline, or no PeerAPI — see [docs/taildrop.md](docs/taildrop.md) |
 | `destination must end with ':'` | Use `pixel:` not `pixel` |
 | Linux `recv` permission denied | Run as the same user as `tailscaled` (often `sudo`) |
+| `proxy.golang.org` timeout | `go env -w GOPROXY=https://goproxy.cn,direct` — [docs/desktop.md](docs/desktop.md) |
+| Win: drop shows a corner hint, tray empty | Rebuild a build that disables WebView2 drop; use `git pull` |
+| Win: WebView2 `.cab` has no “Install” | That cab is Fixed Version (extract only). Use Evergreen `.exe` or the OS copy |
 
 Exit codes: `0` ok, `2` daemon/login, `3` policy/target, `4` I/O or other.
 

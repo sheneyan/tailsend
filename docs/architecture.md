@@ -39,7 +39,7 @@ when tailscaled is in userspace/netstack mode.
 | `internal/tsdrop` | Probe, target list, send (files + zip dirs), inbox receive, error catalog |
 | `internal/tsdrop/tsdroptest` | In-memory LocalAPI for unit tests |
 | `cmd/tailsend` | CLI |
-| `desktop` | Wails v2 + Vue GUI |
+| `desktop` | Wails v2 + Vue GUI (build notes: [desktop.md](desktop.md)) |
 
 `Client.LC` is injectable so tests never talk to a real `tailscaled`.
 

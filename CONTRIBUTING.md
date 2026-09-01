@@ -29,6 +29,13 @@ gofmt -w .
 go vet ./...
 ```
 
+If `proxy.golang.org` times out (common in China):
+
+```bash
+go env -w GOPROXY=https://goproxy.cn,direct
+go env -w GOSUMDB=sum.golang.google.cn
+```
+
 If you change LocalAPI usage, extend the fake daemon and add a test that
 fails without your production change.
 

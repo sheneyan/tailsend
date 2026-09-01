@@ -8,6 +8,10 @@
 - Inbox drawer (save to Downloads / chosen folder)
 - Pair-phone QR of sendable targets
 - Setup copy when Tailscale is down or needs login
+- After send: landing hint (Downloads vs `tailsend recv .` / `tailscale file get .`)
+- macOS: AppleScript file picker; link UniformTypeIdentifiers
+- Windows: disable WebView2 drop overlay; Wails `OnFileDrop` for real paths
+- Docs: PATH, winget, GOPROXY, WebView2 Evergreen vs Fixed Version cab
 
 ### Phase 0 — CLI
 
