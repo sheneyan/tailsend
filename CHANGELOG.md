@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Phase 1 — Desktop GUI
+
+- Wails v2 + Vue window: named-device grid, file drop/picker, send progress
+- Inbox drawer (save to Downloads / chosen folder)
+- Pair-phone QR of sendable targets
+- Setup copy when Tailscale is down or needs login
+
 ### Phase 0 — CLI
 
 - `tailsend status|list|send|inbox|recv` on macOS, Linux, and Windows

@@ -32,6 +32,14 @@ func phonePeer() *ipnstate.PeerStatus {
 	}
 }
 
+func targetNames(ts []tsdrop.Target) []string {
+	out := make([]string, len(ts))
+	for i, t := range ts {
+		out[i] = t.Hostname
+	}
+	return out
+}
+
 func runningDaemon(peers ...*ipnstate.PeerStatus) *tsdroptest.Daemon {
 	return &tsdroptest.Daemon{
 		BackendState: "Running",
@@ -113,6 +121,9 @@ func TestTargetsIncludesSendableAndReasons(t *testing.T) {
 	got, err := c.Targets(context.Background())
 	if err != nil {
 		t.Fatal(err)
+	}
+	if names := targetNames(got); names[0] != "nas" || names[1] != "pixel" || names[2] != "work" {
+		t.Fatalf("targets not sorted by hostname: %v", names)
 	}
 	byHost := map[string]tsdrop.Target{}
 	for _, t := range got {

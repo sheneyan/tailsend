@@ -2,7 +2,7 @@
 
 用 [LocalSend](https://localsend.org) 的用法，走 **Tailscale Taildrop** 传文件。
 
-当前是 CLI（桌面 GUI、Android / iOS 在后续阶段）。它挂在本机已经在跑的官方
+当前是 CLI + 桌面 GUI（Android / iOS 在后续阶段）。它挂在本机已经在跑的官方
 Tailscale 上，**不会自己再创建一个 Tailscale 节点，也没有独立登录**。daemon
 没起来时，会提示你去打开 Tailscale 应用。
 
@@ -21,7 +21,7 @@ tailsend send ./photo.jpg pixel:
 | 表面 | 状态 |
 |---|---|
 | macOS / Linux / Windows CLI | **Phase 0，可用** |
-| 桌面 GUI | 计划中 |
+| 桌面 GUI（Wails） | **Phase 1，可用** |
 | Android / iOS 发送端 | 计划中 |
 
 需要先安装并登录 [Tailscale](https://tailscale.com/download)。
@@ -53,6 +53,28 @@ go build -o tailsend ./cmd/tailsend
 ```
 
 Windows：`go build -o tailsend.exe ./cmd/tailsend`。需要的话把二进制放到 `PATH`。
+
+### 桌面 GUI
+
+需要开启 CGO 的 Go，以及系统 WebView（macOS 自带；Windows 要 WebView2）。
+
+```bash
+git clone https://github.com/sheneyan/tailsend.git
+cd tailsend/desktop
+go build -tags production -o Tailsend .
+./Tailsend
+```
+
+如果链接阶段报 `UTType`，在同一目录再编一次即可（仓库里已加 Darwin 的 framework 链接）。
+```
+
+必须加 `-tags production`（开发可用 `-tags dev`），否则运行会报
+`will not build without the correct build tags`。
+
+改界面：`cd frontend && npm install && npm run build`。打成 `.app` 再用 [Wails v2](https://wails.io) 在 `desktop/` 里跑 `wails build`。
+
+窗口里是设备名网格（不用填 IP）。拖文件或点选，再点设备发送。**Pair phone**
+给出配对 QR；**Inbox** 把 Linux 式收件箱存到下载目录。
 
 ## 用法
 

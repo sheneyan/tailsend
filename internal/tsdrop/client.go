@@ -9,6 +9,7 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -62,11 +63,11 @@ func parseState(s string) BackendState {
 
 // Self is the local Tailscale node.
 type Self struct {
-	Hostname string
-	DNSName  string
-	IPs      []netip.Addr
-	Online   bool
-	OS       string
+	Hostname string       `json:"hostname"`
+	DNSName  string       `json:"dnsName"`
+	IPs      []netip.Addr `json:"ips,omitempty"`
+	Online   bool         `json:"online"`
+	OS       string       `json:"os"`
 }
 
 // Target is a tailnet peer that might accept a Taildrop.
@@ -89,12 +90,12 @@ type WaitingFile struct {
 
 // Progress is a send update.
 type Progress struct {
-	Name   string
-	PeerID string
-	Sent   int64
-	Total  int64
-	State  string
-	Err    string
+	Name   string `json:"name"`
+	PeerID string `json:"peerID"`
+	Sent   int64  `json:"sent"`
+	Total  int64  `json:"total"`
+	State  string `json:"state"`
+	Err    string `json:"err,omitempty"`
 }
 
 // SendItem is a local path to send.
@@ -188,6 +189,20 @@ func (c *Client) Targets(ctx context.Context) ([]Target, error) {
 		}
 		out = append(out, targetFromPeer(p))
 	}
+	slices.SortFunc(out, func(a, b Target) int {
+		an := strings.ToLower(strings.TrimSpace(a.Hostname))
+		bn := strings.ToLower(strings.TrimSpace(b.Hostname))
+		if an == "" {
+			an = strings.ToLower(a.DNSName)
+		}
+		if bn == "" {
+			bn = strings.ToLower(b.DNSName)
+		}
+		if c := strings.Compare(an, bn); c != 0 {
+			return c
+		}
+		return strings.Compare(a.StableID, b.StableID)
+	})
 	return out, nil
 }
 

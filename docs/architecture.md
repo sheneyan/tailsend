@@ -4,7 +4,8 @@ Tailsend is a **parasite client**: it uses the Tailscale node you already have.
 It never embeds `tsnet` / libtailscale and never performs Tailscale login.
 
 ```
-CLI `tailsend`  ──►  internal/tsdrop  ──►  tailscaled LocalAPI
+CLI `tailsend`  ─┐
+Wails GUI        ├─►  internal/tsdrop  ──►  tailscaled LocalAPI
                                               │
                                               │  PeerAPI PUT /v0/put/<name>
                                               ▼
@@ -38,6 +39,7 @@ when tailscaled is in userspace/netstack mode.
 | `internal/tsdrop` | Probe, target list, send (files + zip dirs), inbox receive, error catalog |
 | `internal/tsdrop/tsdroptest` | In-memory LocalAPI for unit tests |
 | `cmd/tailsend` | CLI |
+| `desktop` | Wails v2 + Vue GUI |
 
 `Client.LC` is injectable so tests never talk to a real `tailscaled`.
 

@@ -3,3 +3,7 @@
 *.exe
 .DS_Store
 /dist/
+desktop/Tailsend
+desktop/build/
+desktop/frontend/node_modules/
+node_modules/

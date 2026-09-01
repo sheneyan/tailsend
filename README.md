@@ -2,10 +2,10 @@
 
 LocalSend-style file transfer over **Tailscale Taildrop**.
 
-Tailsend is a CLI (desktop GUI and Android/iOS come later) that talks to the
-official Tailscale daemon already running on your machine. It does **not**
-create a second Tailscale node and has **no login of its own**. If Tailscale
-is not running, Tailsend tells you to open the Tailscale app.
+Tailsend is a CLI and desktop GUI that talks to the official Tailscale daemon
+already running on your machine. Android/iOS senders come later. It does
+**not** create a second Tailscale node and has **no login of its own**. If
+Tailscale is not running, Tailsend tells you to open the Tailscale app.
 
 ```bash
 tailsend list
@@ -23,7 +23,7 @@ tailsend send ./photo.jpg pixel:
 | Surface | State |
 |---|---|
 | CLI on macOS, Linux, Windows | **Phase 0 — usable** |
-| Desktop GUI | Planned |
+| Desktop GUI (Wails) | **Phase 1 — usable** |
 | Android / iOS senders | Planned |
 
 Requires [Tailscale](https://tailscale.com/download) installed and signed in.
@@ -57,6 +57,34 @@ go build -o tailsend ./cmd/tailsend
 
 On Windows, `go build -o tailsend.exe ./cmd/tailsend`. Optional: move the
 binary onto your `PATH`.
+
+### Desktop GUI
+
+Needs Go with CGO, and the platform WebView (macOS ships it; Windows needs
+WebView2).
+
+```bash
+git clone https://github.com/sheneyan/tailsend.git
+cd tailsend/desktop
+go build -tags production -o Tailsend .
+./Tailsend
+```
+
+On Apple Silicon / recent Xcode, if the linker complains about `UTType`, rebuild
+from the same directory (a Darwin-only link flag is already in the repo).
+```
+
+Wails 必须带 `-tags production`（或开发时用 `-tags dev`），否则运行会报
+`will not build without the correct build tags`。
+
+To rebuild the Vue UI (optional): `cd frontend && npm install && npm run build`.
+
+Packaging into `.app` / installer: install [Wails v2](https://wails.io) and run
+`wails build` in `desktop/`. Live reload: `wails dev`.
+
+The window lists named devices (no IP field). Drop or pick files, then click a
+device. **Pair phone** shows a QR of `tailsend list --json` for a future mobile
+app. **Inbox** drains the Linux-style Taildrop inbox into Downloads.
 
 ## Usage
 
@@ -134,6 +162,7 @@ Layout:
 
 ```
 cmd/tailsend/          CLI
+desktop/               Wails v2 GUI (Vue)
 internal/tsdrop/       LocalAPI client (send, inbox, zip)
 internal/tsdrop/tsdroptest/   fake daemon for tests
 ```
@@ -143,7 +172,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/architecture.md](docs/architect
 ## Roadmap
 
 1. **Phase 0 (done)** — Go library + CLI
-2. **Phase 1** — Desktop GUI (Wails) with a named-device grid
+2. **Phase 1 (done)** — Desktop GUI (Wails) with a named-device grid
 3. **Phase 2** — Android sender
 4. **Phase 3** — iOS sender
 5. **Phase 4** — Share-sheet polish, resume UX
