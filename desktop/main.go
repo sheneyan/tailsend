@@ -28,7 +28,8 @@ func main() {
 		OnStartup:        app.startup,
 		Bind:             []interface{}{app},
 		DragAndDrop: &options.DragAndDrop{
-			EnableFileDrop: true,
+			EnableFileDrop:     true,
+			DisableWebViewDrop: true,
 		},
 		Mac: &mac.Options{
 			TitleBar: mac.TitleBarHiddenInset(),

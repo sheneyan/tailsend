@@ -1,5 +1,5 @@
 <template>
-  <div class="shell" :class="{ darwin: platform === 'darwin' }" @dragover.prevent @drop.prevent="onDrop">
+  <div class="shell" :class="{ darwin: platform === 'darwin' }" @dragover.prevent>
     <header class="top" style="--wails-draggable: drag">
       <div class="brand">
         <span class="logo">↑</span>
@@ -131,7 +131,7 @@ import {
   PairingQR,
   Platform,
 } from "../wailsjs/go/main/App";
-import { EventsOn } from "../wailsjs/runtime/runtime";
+import { EventsOn, OnFileDrop, OnFileDropOff } from "../wailsjs/runtime/runtime";
 
 const snap = ref({ state: "Unknown", self: {}, targets: [], inbox: [] });
 const files = ref([]);
@@ -266,10 +266,20 @@ function landingFor(t) {
 function basename(p) {
   return (p || "").split(/[/\\]/).pop();
 }
-function addPaths(paths) {
-  if (!paths) return;
-  for (const p of paths) {
-    if (!p) continue;
+function normalizePaths(arg, ...rest) {
+  let list = [];
+  if (Array.isArray(arg)) {
+    list = arg;
+  } else if (typeof arg === "string" && (arg.includes("\\") || arg.includes("/") || arg.length > 1)) {
+    list = rest.length ? [arg, ...rest] : [arg];
+  } else if (arg != null && typeof arg === "object" && typeof arg.length === "number") {
+    list = Array.from(arg);
+  }
+  return list.filter((p) => typeof p === "string" && p.length > 1 && (p.includes("\\") || p.includes("/")));
+}
+
+function addPaths(...args) {
+  for (const p of normalizePaths(...args)) {
     if (files.value.some((f) => f.path === p)) continue;
     files.value.push({ path: p, name: basename(p) });
   }
@@ -317,12 +327,6 @@ async function sendTo(t) {
     sendingTo.value = "";
     refresh();
   }
-}
-
-function onDrop(ev) {
-  // HTML drop is a fallback; Wails file-drop event is preferred.
-  const list = ev.dataTransfer?.files;
-  if (!list?.length) return;
 }
 
 async function openPair() {
@@ -379,13 +383,15 @@ onMounted(async () => {
       stateline: p.state === "failed" ? p.err : p.state,
     };
   });
-  offDrop = EventsOn("files-dropped", (paths) => addPaths(paths));
+  offDrop = EventsOn("files-dropped", (...args) => addPaths(...args));
+  OnFileDrop((_x, _y, paths) => addPaths(paths), false);
 });
 
 onUnmounted(() => {
   if (timer) clearInterval(timer);
   offProgress();
   offDrop();
+  OnFileDropOff();
 });
 </script>
 
@@ -559,6 +565,7 @@ onUnmounted(() => {
   min-height: 0;
 }
 .drop {
+  --wails-drop-target: drop;
   flex: 1;
   border: 1px dashed var(--line);
   border-radius: var(--radius);
