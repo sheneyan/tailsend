@@ -93,7 +93,27 @@ sudo apt install -y gcc pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
 # if 4.1 is missing: libwebkit2gtk-4.0-dev
 ```
 
-Go from apt may be too old; use https://go.dev/dl if `go version` &lt; 1.24.
+Ubuntu’s `apt install golang-go` is too old (often 1.22, sometimes older). This
+repo needs **Go 1.26+** because `tailscale.com` v1.102 requires `go 1.26.6`.
+Do **not** use `sudo go build`. Install the official tarball:
+
+```bash
+go version
+which go    # must become /usr/local/go/bin/go, not /usr/bin/go
+
+sudo apt remove -y golang-go golang-1.22-go 2>/dev/null
+cd /tmp
+wget https://go.dev/dl/go1.27.0.linux-amd64.tar.gz
+sudo rm -rf /usr/local/go
+sudo tar -C /usr/local -xzf go1.27.0.linux-amd64.tar.gz
+echo 'export PATH=/usr/local/go/bin:$PATH' >> ~/.bashrc
+source ~/.bashrc
+hash -r
+go version   # go1.27.0
+```
+
+If `go.work` errors with `must match format 1.23`, you are still on the apt
+binary: `/usr/bin/go` is ahead of `/usr/local/go/bin` in `PATH`.
 
 ```bash
 cd tailsend/desktop

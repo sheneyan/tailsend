@@ -38,7 +38,8 @@ tailsend send ./photo.jpg pixel:
 
 ## 安装
 
-需要 Go 1.24+（开发环境是 1.27）。
+需要 Go 1.26+（依赖 `tailscale.com` v1.102 要求 1.26.6；开发环境是 1.27）。
+Ubuntu 的 `apt install golang-go` **版本不够**，请用 https://go.dev/dl 的官方包，不要 `sudo go build`。
 
 ```bash
 go install github.com/sheneyan/tailsend/cmd/tailsend@latest

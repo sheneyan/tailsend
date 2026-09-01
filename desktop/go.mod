@@ -1,6 +1,6 @@
 module github.com/sheneyan/tailsend/desktop
 
-go 1.27.0
+go 1.22
 
 require (
 	github.com/sheneyan/tailsend v0.0.0

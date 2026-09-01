@@ -41,7 +41,8 @@ There is no `tailsend login`.
 
 ## Install
 
-Go 1.24+ (developed on 1.27).
+Go 1.26+ (Tailscale’s module requires 1.26.6; developed on 1.27). Ubuntu apt
+`golang-go` is too old — install from https://go.dev/dl, not `apt`.
 
 ```bash
 go install github.com/sheneyan/tailsend/cmd/tailsend@latest

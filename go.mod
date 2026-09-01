@@ -1,6 +1,6 @@
 module github.com/sheneyan/tailsend
 
-go 1.27.0
+go 1.22
 
 require tailscale.com v1.102.3
 
