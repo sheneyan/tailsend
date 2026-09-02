@@ -16,7 +16,7 @@ package main
 
 extern void goWinDropped(char*);
 
-/* MinGW shellapi.h often omits DROPFILES unless extra SDK headers are present. */
+// MinGW shellapi.h often omits DROPFILES unless extra SDK headers are present.
 typedef struct TailsendDropFiles {
 	DWORD pFiles;
 	POINT pt;
