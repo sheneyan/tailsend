@@ -31,7 +31,7 @@
       <aside class="side">
         <div class="section-label">1. Files to send</div>
         <div class="drop" @click="pickFiles">
-          <p v-if="!files.length">{{ winClickOnly ? "Click to choose files." : "Drop files here, or click to choose." }}</p>
+          <p v-if="!files.length">Click to choose files.</p>
           <ul v-else>
             <li v-for="(f, i) in files" :key="f.path">
               <span class="fname">{{ f.name }}</span>
@@ -51,7 +51,10 @@
           <p v-if="landed.body">{{ landed.body }}</p>
           <pre v-if="landed.commands?.length" class="cmds">{{ landed.commands.join("\n") }}</pre>
         </div>
-        <p class="hint">{{ winClickOnly ? "Click to pick files, then tap a device." : "Click to pick files, or drop files/folders on this window. Then tap a device." }}</p>
+        <p class="hint">
+          Click to pick files, then tap a device.
+          <template v-if="canDrop"> You can also drop files or folders on this window.</template>
+        </p>
       </aside>
 
       <section class="grid-wrap">
@@ -146,10 +149,8 @@ const qr = ref("");
 const recvDir = ref("");
 const recvNote = ref("");
 const receiving = ref(false);
-const platform = ref(/Windows/i.test(navigator.userAgent) ? "windows" : "");
-const winClickOnly = computed(
-  () => platform.value === "windows" || /Windows/i.test(navigator.userAgent)
-);
+const platform = ref("");
+const canDrop = computed(() => platform.value === "darwin" || platform.value === "linux");
 const landed = ref(null);
 
 let timer = 0;
@@ -439,7 +440,7 @@ onMounted(async () => {
     };
   });
   offDrop = EventsOn("files-dropped", (...args) => addPaths(...args));
-  if (!winClickOnly.value) {
+  if (canDrop.value) {
     OnFileDrop((_x, _y, paths) => addPaths(paths), false);
     window.addEventListener("dragover", onPageDragOver, true);
     window.addEventListener("drop", onPageDrop, true);
@@ -450,7 +451,7 @@ onUnmounted(() => {
   if (timer) clearInterval(timer);
   offProgress();
   offDrop();
-  if (!winClickOnly.value) {
+  if (canDrop.value) {
     OnFileDropOff();
     window.removeEventListener("dragover", onPageDragOver, true);
     window.removeEventListener("drop", onPageDrop, true);

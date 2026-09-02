@@ -20,8 +20,8 @@ const (
 	wmSetIcon   = 0x0080
 	iconSmall   = 0
 	iconBig     = 1
-	gclpHicon   = -14
-	gclpHiconSm = -34
+	gclpHicon   = ^uintptr(13) // GCLP_HICON = -14
+	gclpHiconSm = ^uintptr(33) // GCLP_HICONSM = -34
 	gaRoot      = 2
 )
 
@@ -116,8 +116,8 @@ func applyWindowsIcon(hiconSmall, hiconBig uintptr) {
 		}
 		sendMessage.Call(uintptr(root), wmSetIcon, iconBig, hiconBig)
 		sendMessage.Call(uintptr(root), wmSetIcon, iconSmall, hiconSmall)
-		setClassLongPtr.Call(uintptr(root), uintptr(int32(gclpHicon)), hiconBig)
-		setClassLongPtr.Call(uintptr(root), uintptr(int32(gclpHiconSm)), hiconSmall)
+		setClassLongPtr.Call(uintptr(root), gclpHicon, hiconBig)
+		setClassLongPtr.Call(uintptr(root), gclpHiconSm, hiconSmall)
 	})
 }
 
