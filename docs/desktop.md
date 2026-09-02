@@ -12,10 +12,10 @@ Read this before `go build`. Most failures so far were one of these.
 | OS | Command |
 |---|---|
 | macOS (raw binary) | `cd desktop && go build -tags production -o Tailsend .` |
-| macOS (Dock / no Terminal) | `cd desktop && make app` then `open Tailsend.app` |
-| Windows | `cd desktop; .\pack-windows.ps1` (or `go build -tags production -ldflags "-H windowsgui" -o Tailsend.exe .`) |
-| Linux (Ubuntu 24 / webkit2gtk 4.1) | `cd desktop && go build -tags production,webkit2_41 -o Tailsend .` |
-| Linux (webkit2gtk 4.0 only) | `cd desktop && go build -tags production -o Tailsend .` |
+| macOS (.app + .dmg) | `cd desktop && make dmg` → `Tailsend.app` and `dist-release/Tailsend.dmg` |
+| Windows | `cd desktop; powershell -ExecutionPolicy Bypass -File .\pack-windows.ps1` |
+| Linux (Ubuntu 24 / webkit2gtk 4.1) | `cd desktop && sh ./pack-linux.sh` |
+| Linux (webkit2gtk 4.0 only) | `cd desktop && TAGS=production sh ./pack-linux.sh` |
 
 Equivalent: `make run` on macOS; on Ubuntu 24 `make TAGS=production,webkit2_41 run`.
 
@@ -179,46 +179,36 @@ Then rebuild this version.
 WebKit falls back to software. Inbox/UI still work. To quiet it:
 `sudo usermod -aG render,video $USER` then log out and back in.
 
-## Packaging (no extra console, real app icon)
+## Release packages
 
-`go build` of the GUI is a **development binary**. It is not a signed
-installer. Double-clicking that binary looks unfinished:
+GUI binaries **cannot be cross-compiled** (CGO / WebView). Build each
+artifact on that OS. Outputs go in `desktop/dist-release/` (gitignored).
+CLI zip/binaries are separate: `make cli-all` → repo-root `dist/tailsend-cli-*`
+(GitHub Release on `v*` tags).
 
-| OS | What you see | What to do |
-|---|---|---|
-| Windows | A console window behind the GUI; generic title-bar icon | Build with `-ldflags "-H windowsgui"`. Current `main` also hides a console that *this* process owns (double-click). The exe icon is `rsrc_windows_*.syso` (from `build/appicon.png`); rebuild after `git pull`. If Explorer still shows the old icon, copy the new exe to a new folder — Windows caches icons. |
-| macOS | Terminal pops open; generic Go icon | `cd desktop && make app` → `Tailsend.app` (Dock icon from `desktop/build/appicon.png`) |
-| Linux | Terminal if you launched from a shell; generic window icon | Copy `Tailsend.desktop` to `~/.local/share/applications/` and `build/appicon.png` to `~/.local/share/icons/hicolor/512x512/apps/tailsend.png`. `Terminal=false`. |
+| Artifact | Build machine | Command | Output |
+|---|---|---|---|
+| `Tailsend.dmg` (unsigned, contains `.app` + Applications link) | macOS | `cd desktop && make dmg` | `desktop/dist-release/Tailsend.dmg` also `desktop/Tailsend.app` |
+| `Tailsend.exe` | Windows | `cd desktop` then `powershell -ExecutionPolicy Bypass -File .\pack-windows.ps1` | `desktop/Tailsend.exe` and `desktop/dist-release/Tailsend.exe` |
+| `tailsend-gui-linux-amd64.tar.gz` | Linux | `cd desktop && sh ./pack-linux.sh` | `desktop/dist-release/*.tar.gz` |
+| `tailsend-cli-<os>-<arch>` | any | `make cli-all` from repo root | `dist/` |
 
-Windows release-style build (no console + exe icon):
+macOS: `Tailsend.app` is the local app (double-click, Dock icon). The **dmg**
+is what you copy to Downloads or attach to a GitHub Release. It is **not
+notarized**; Gatekeeper may require right-click → Open the first time.
+Already have an `.app` and only need a dmg: `make dmg-only`.
 
-```powershell
-cd desktop
-.\pack-windows.ps1
-.\Tailsend.exe
-```
+Windows: do **not** `go install github.com/tc-hib/go-winres` (Defender often
+flags it). `pack-windows.ps1` skips the PE patch if `go-winres` is missing;
+`rsrc_windows_*.syso` (icon resource ID 3) plus runtime `WM_SETICON` remain.
+Click the left pane to pick files (Explorer drop is in TODO.md). Copy the new
+exe to a fresh folder if Explorer shows a stale icon.
 
-`pack-windows.ps1` is `go build` plus an **optional** `go-winres patch`.
-Do not `go install github.com/tc-hib/go-winres` on a machine with Defender —
-it often flags that tool as malware. The committed `rsrc_windows_*.syso`
-(resource ID 3) and runtime `WM_SETICON` are enough for the paper-plane icon.
-If Explorer still shows the old icon, copy `Tailsend.exe` to a new folder.
+Linux tarball includes `Tailsend`, `Tailsend.desktop`, and `tailsend.png`.
+Ubuntu 24 needs `TAGS=production,webkit2_41` (the script default).
 
-macOS:
-
-```bash
-cd desktop
-make app          # or: sh ./pack-macos.sh
-open Tailsend.app
-```
-
-The window/taskbar/Dock icon is `desktop/build/appicon.png` (also used in
-About on macOS and as the GTK icon on Linux). On Windows it is compiled into
-`Tailsend.exe` via `rsrc_windows_amd64.syso` / `rsrc_windows_arm64.syso`.
-
-Signed `.dmg` / `.msi` / `.deb` GitHub Releases are **not** in Phase 1.
-`wails build` can produce platform packages later; it expects
-`desktop/build/appicon.png`.
+Apple notarization, Authenticode, and `.msi`/`.deb` are still later
+([TODO.md](../TODO.md)).
 
 ## After a successful send
 

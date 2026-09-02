@@ -13,4 +13,7 @@ if ($winres) {
 } else {
     Write-Host "go-winres not on PATH (skipping PE patch; using rsrc_windows_*.syso + runtime icon)"
 }
+New-Item -ItemType Directory -Force -Path dist-release | Out-Null
+Copy-Item -Force Tailsend.exe dist-release\Tailsend.exe
 Write-Host "built $PWD\Tailsend.exe"
+Write-Host "copied $PWD\dist-release\Tailsend.exe"

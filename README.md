@@ -72,8 +72,16 @@ make cli                          # this machine
 make cli-all                      # dist/tailsend-cli-* for six OS/arch pairs
 ```
 
-The GUI (`Tailsend` / `Tailsend.exe`) is a separate CGO binary and **cannot**
-be cross-compiled this way — see [docs/desktop.md](docs/desktop.md).
+The GUI is a separate CGO binary and **cannot** be cross-compiled. On each OS:
+
+```bash
+cd desktop
+make dmg          # macOS → Tailsend.app + dist-release/Tailsend.dmg
+sh ./pack-linux.sh
+# Windows: powershell -ExecutionPolicy Bypass -File .\pack-windows.ps1
+```
+
+See [docs/desktop.md](docs/desktop.md) **Release packages**.
 
 ### Desktop GUI
 

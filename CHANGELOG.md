@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### GUI release scripts
+
+- macOS: `make dmg` writes unsigned `dist-release/Tailsend.dmg` (app + Applications link)
+- Linux: `desktop/pack-linux.sh` writes `dist-release/tailsend-gui-linux-*.tar.gz`
+- Windows: `pack-windows.ps1` also copies `Tailsend.exe` to `dist-release/`
+
 ### Windows Explorer drop
 
 - Removed from the Windows GUI. Click the left pane to pick files. Drop is

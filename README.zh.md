@@ -66,8 +66,16 @@ make cli        # 当前这台机器
 make cli-all    # dist/ 下六个平台的 tailsend-cli-*
 ```
 
-GUI（`Tailsend`）是另一份带 CGO 的程序，**不能**这样交叉编译，见
-[docs/desktop.md](docs/desktop.md)。
+GUI 是另一份带 CGO 的程序，**不能**交叉编译，要在对应系统上打包：
+
+```bash
+cd desktop
+make dmg           # macOS：Tailsend.app + dist-release/Tailsend.dmg
+sh ./pack-linux.sh
+# Windows: powershell -ExecutionPolicy Bypass -File .\pack-windows.ps1
+```
+
+见 [docs/desktop.md](docs/desktop.md) 的 **Release packages**。
 
 ### 桌面 GUI
 

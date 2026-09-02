@@ -1,4 +1,4 @@
-.PHONY: build run app winres
+.PHONY: build run app dmg winres
 
 # Linux on Ubuntu 24: make TAGS=production,webkit2_41
 TAGS ?= production
@@ -12,9 +12,13 @@ build:
 run: build
 	./Tailsend
 
-# macOS .app (Dock icon, no Terminal on double-click)
-app:
+# macOS .app + unsigned .dmg → dist-release/Tailsend.dmg
+app dmg:
 	sh ./pack-macos.sh
+
+# existing .app only → dmg
+dmg-only:
+	SKIP_BUILD=1 sh ./pack-macos.sh
 
 # Windows exe icon: rsrc_windows_amd64.syso / rsrc_windows_arm64.syso
 winres:

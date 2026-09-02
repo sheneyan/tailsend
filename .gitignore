@@ -5,6 +5,8 @@
 /dist/
 desktop/Tailsend
 desktop/Tailsend.app
+desktop/Tailsend.dmg
+desktop/dist-release/
 desktop/build/bin/
 desktop/build/*.iconset
 desktop/frontend/node_modules/
