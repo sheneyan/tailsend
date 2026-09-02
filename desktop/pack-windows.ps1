@@ -7,7 +7,7 @@ go build -tags production -ldflags "-H windowsgui" -o Tailsend.exe .
 if (-not (Get-Command go-winres -ErrorAction SilentlyContinue)) {
     go install github.com/tc-hib/go-winres@latest
 }
-# go-winres requires PNG <= 256x256 (appicon-256.png). A 1024 PNG prints
-# "image: unknown format" / "must fit in 256x256" and leaves the default icon.
+# Wails loads the window icon as resource ID 3 (see winc.AppIconID).
+# PNG must be <= 256x256. A 1024 source prints "must fit in 256x256".
 go-winres patch --in winres/winres.json --delete --no-backup .\Tailsend.exe
 Write-Host "built $PWD\Tailsend.exe"

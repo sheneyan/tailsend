@@ -4,6 +4,11 @@
 
 ### Windows Explorer drop
 
+- Window icon is resource ID 3 (Wails `AppIconID`). Subclass only
+  `wailsWindow`; parse DROPFILES if DragQueryFile returns nothing.
+
+### Windows Explorer drop (OLE)
+
 - HDROP is the HGLOBAL handle (not a GlobalLock pointer). COM Drop
   dispatches onto a Go goroutine. go-winres icon PNG is 256×256.
   Taskbar/title-bar `WM_SETICON` retried on every process window.
