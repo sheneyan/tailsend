@@ -1,13 +1,16 @@
-# Build Tailsend.exe without a console, then stamp the paper-plane icon
-# into the PE (CGO/gcc often drops .syso). Requires gcc on PATH.
+# Build Tailsend.exe without a console. Icon comes from rsrc_windows_*.syso
+# in this directory (resource ID 3). go-winres is optional: Defender often
+# flags `go install github.com/tc-hib/go-winres`.
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
 go build -tags production -ldflags "-H windowsgui" -o Tailsend.exe .
-if (-not (Get-Command go-winres -ErrorAction SilentlyContinue)) {
-    go install github.com/tc-hib/go-winres@latest
+
+$winres = Get-Command go-winres -ErrorAction SilentlyContinue
+if ($winres) {
+    go-winres patch --in winres/winres.json --delete --no-backup .\Tailsend.exe
+    Write-Host "stamped PE icon with go-winres"
+} else {
+    Write-Host "go-winres not on PATH (skipping PE patch; using rsrc_windows_*.syso + runtime icon)"
 }
-# Wails loads the window icon as resource ID 3 (see winc.AppIconID).
-# PNG must be <= 256x256. A 1024 source prints "must fit in 256x256".
-go-winres patch --in winres/winres.json --delete --no-backup .\Tailsend.exe
 Write-Host "built $PWD\Tailsend.exe"

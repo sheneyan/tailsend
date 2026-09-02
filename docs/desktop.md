@@ -198,11 +198,11 @@ cd desktop
 .\Tailsend.exe
 ```
 
-`pack-windows.ps1` runs `go build` then `go-winres patch` so the paper-plane
-icon is in the PE. CGO/gcc often drops `.syso` resources, which is why a
-plain `go build` can show the default Windows icon again. The window also
-applies the icon at runtime. After `git pull`, rebuild; if Explorer still
-shows the old icon, copy `Tailsend.exe` to a new folder.
+`pack-windows.ps1` is `go build` plus an **optional** `go-winres patch`.
+Do not `go install github.com/tc-hib/go-winres` on a machine with Defender —
+it often flags that tool as malware. The committed `rsrc_windows_*.syso`
+(resource ID 3) and runtime `WM_SETICON` are enough for the paper-plane icon.
+If Explorer still shows the old icon, copy `Tailsend.exe` to a new folder.
 
 macOS:
 

@@ -5,12 +5,16 @@ package main
 import (
 	_ "embed"
 	"os"
+	"path/filepath"
 	"syscall"
 	"time"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
+
+//go:embed build/appicon.ico
+var appIconICO []byte
 
 const (
 	wmSetIcon   = 0x0080
@@ -37,6 +41,9 @@ func scheduleWindowsWindowChrome() {
 			time.Sleep(100 * time.Millisecond)
 			if small == 0 {
 				small, big = extractExeIcons()
+				if small == 0 {
+					small, big = loadEmbeddedIcons()
+				}
 				if small == 0 {
 					continue
 				}
@@ -66,6 +73,30 @@ func extractExeIcons() (small, big uintptr) {
 		large = sm
 	}
 	return sm, large
+}
+
+func loadEmbeddedIcons() (small, big uintptr) {
+	icoPath := filepath.Join(os.TempDir(), "tailsend-appicon.ico")
+	if err := os.WriteFile(icoPath, appIconICO, 0o644); err != nil {
+		return 0, 0
+	}
+	p, err := windows.UTF16PtrFromString(icoPath)
+	if err != nil {
+		return 0, 0
+	}
+	user32 := windows.NewLazySystemDLL("user32.dll")
+	loadImage := user32.NewProc("LoadImageW")
+	const imageIcon = 1
+	const lrLoadFromFile = 0x0010
+	small, _, _ = loadImage.Call(0, uintptr(unsafe.Pointer(p)), imageIcon, 16, 16, lrLoadFromFile)
+	big, _, _ = loadImage.Call(0, uintptr(unsafe.Pointer(p)), imageIcon, 32, 32, lrLoadFromFile)
+	if big == 0 {
+		big = small
+	}
+	if small == 0 {
+		small = big
+	}
+	return small, big
 }
 
 func applyWindowsIcon(hiconSmall, hiconBig uintptr) {
