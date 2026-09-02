@@ -86,11 +86,14 @@ Click-to-pick uses the native Windows dialog (not AppleScript).
 
 ## Linux (Ubuntu 24 + XFCE is fine)
 
-Needs GTK3 + WebKit, not GNOME specifically.
+Needs GTK3 + WebKit **dev packages**, not GNOME. XFCE is fine.
+
+Ubuntu 24 ships **webkit2gtk-4.1**, while Wails v2 defaults to 4.0. Install 4.1
+and add the `webkit2_41` tag:
 
 ```bash
 sudo apt install -y gcc pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
-# if 4.1 is missing: libwebkit2gtk-4.0-dev
+pkg-config --exists gtk+-3.0 webkit2gtk-4.1 && echo ok
 ```
 
 Ubuntu’s `apt install golang-go` is too old (often 1.22, sometimes older). This
@@ -117,9 +120,11 @@ binary: `/usr/bin/go` is ahead of `/usr/local/go/bin` in `PATH`.
 
 ```bash
 cd tailsend/desktop
-go build -tags production -o Tailsend .
+go build -tags production,webkit2_41 -o Tailsend .
 ./Tailsend
 ```
+
+If `apt` has no 4.1 package, install `libwebkit2gtk-4.0-dev` and drop `,webkit2_41`.
 
 **Inbox:** Linux does not auto-save to Downloads. Send a file to this machine,
 then **Inbox** in the GUI, or `tailsend recv .` / `sudo tailscale file get .`.
