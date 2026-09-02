@@ -31,7 +31,7 @@ as an opt-in path.
 
 ## Signed / notarized GUI installers
 
-Unsigned packages are built on each OS with `desktop/pack-macos.sh` (`.dmg`),
-`pack-windows.ps1` (`.exe`), `pack-linux.sh` (`.tar.gz`). Apple notarization,
-Authenticode, and `.msi` / `.deb` are still later. CLI binaries already ship
-on `v*` tags.
+Unsigned packages: `make dmg`, `pack-windows.ps1`, `pack-linux.sh`. How to
+buy certs and set `CODESIGN_IDENTITY` / `NOTARY_PROFILE` / `SIGN_THUMBPRINT`:
+[docs/signing.md](docs/signing.md). `.msi` / `.deb` still later. CLI binaries
+already ship on `v*` tags.

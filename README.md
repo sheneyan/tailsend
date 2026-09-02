@@ -81,7 +81,8 @@ sh ./pack-linux.sh
 # Windows: powershell -ExecutionPolicy Bypass -File .\pack-windows.ps1
 ```
 
-See [docs/desktop.md](docs/desktop.md) **Release packages**.
+See [docs/desktop.md](docs/desktop.md) **Release packages**. Notarization and
+Authenticode: [docs/signing.md](docs/signing.md).
 
 ### Desktop GUI
 

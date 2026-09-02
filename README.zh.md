@@ -75,7 +75,8 @@ sh ./pack-linux.sh
 # Windows: powershell -ExecutionPolicy Bypass -File .\pack-windows.ps1
 ```
 
-见 [docs/desktop.md](docs/desktop.md) 的 **Release packages**。
+见 [docs/desktop.md](docs/desktop.md) 的 **Release packages**。公证 / Authenticode：
+[docs/signing.md](docs/signing.md)。
 
 ### 桌面 GUI
 

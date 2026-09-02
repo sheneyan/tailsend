@@ -13,6 +13,18 @@ if ($winres) {
 } else {
     Write-Host "go-winres not on PATH (skipping PE patch; using rsrc_windows_*.syso + runtime icon)"
 }
+if ($env:SIGN_THUMBPRINT) {
+    $ts = $env:SIGN_TIMESTAMP
+    if (-not $ts) { $ts = "http://timestamp.digicert.com" }
+    $signtool = Get-Command signtool -ErrorAction SilentlyContinue
+    if (-not $signtool) {
+        Write-Warning "SIGN_THUMBPRINT is set but signtool.exe is not on PATH (install Windows SDK)"
+    } else {
+        signtool sign /fd SHA256 /td SHA256 /tr $ts /sha1 $env:SIGN_THUMBPRINT .\Tailsend.exe
+        Write-Host "signed Tailsend.exe"
+    }
+}
+
 New-Item -ItemType Directory -Force -Path dist-release | Out-Null
 Copy-Item -Force Tailsend.exe dist-release\Tailsend.exe
 Write-Host "built $PWD\Tailsend.exe"

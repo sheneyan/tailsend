@@ -40,6 +40,13 @@ iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/appicon.icns"
 rm -rf "$ICONSET"
 fi
 
+if [ -n "${CODESIGN_IDENTITY:-}" ]; then
+	echo "codesign $APP as $CODESIGN_IDENTITY"
+	codesign --force --deep --options runtime \
+		--entitlements Tailsend.entitlements \
+		--sign "$CODESIGN_IDENTITY" "$APP"
+fi
+
 mkdir -p dist-release
 STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT
@@ -47,6 +54,17 @@ cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
 rm -f dist-release/Tailsend.dmg
 hdiutil create -volname Tailsend -srcfolder "$STAGE" -ov -format UDZO dist-release/Tailsend.dmg
+
+if [ -n "${CODESIGN_IDENTITY:-}" ]; then
+	codesign --force --sign "$CODESIGN_IDENTITY" dist-release/Tailsend.dmg
+fi
+if [ -n "${NOTARY_PROFILE:-}" ]; then
+	echo "notarytool submit dist-release/Tailsend.dmg"
+	xcrun notarytool submit dist-release/Tailsend.dmg \
+		--keychain-profile "$NOTARY_PROFILE" --wait
+	xcrun stapler staple dist-release/Tailsend.dmg
+	xcrun stapler staple "$APP"
+fi
 
 echo "built $PWD/$APP"
 echo "built $PWD/dist-release/Tailsend.dmg"

@@ -207,8 +207,13 @@ exe to a fresh folder if Explorer shows a stale icon.
 Linux tarball includes `Tailsend`, `Tailsend.desktop`, and `tailsend.png`.
 Ubuntu 24 needs `TAGS=production,webkit2_41` (the script default).
 
-Apple notarization, Authenticode, and `.msi`/`.deb` are still later
-([TODO.md](../TODO.md)).
+**Signing:** unsigned packages are the default. To notarize the dmg or
+Authenticode-sign the exe, you need paid certificates — see
+[signing.md](signing.md). `CODESIGN_IDENTITY` + `NOTARY_PROFILE` (macOS) and
+`SIGN_THUMBPRINT` (Windows) turn on the pack scripts.
+
+Apple notarization, Authenticode, and `.msi`/`.deb` installers are otherwise
+still later ([TODO.md](../TODO.md)).
 
 ## After a successful send
 

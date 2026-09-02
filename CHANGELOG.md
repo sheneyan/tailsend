@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Signing hooks
+
+- Optional Apple notarization (`CODESIGN_IDENTITY`, `NOTARY_PROFILE`) and
+  Authenticode (`SIGN_THUMBPRINT`). See docs/signing.md.
+
 ### GUI release scripts
 
 - macOS: `make dmg` writes unsigned `dist-release/Tailsend.dmg` (app + Applications link)
