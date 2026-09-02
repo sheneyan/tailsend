@@ -49,6 +49,7 @@ func (a *App) startup(ctx context.Context) {
 	}
 	if goruntime.GOOS == "windows" {
 		scheduleWindowsWindowChrome()
+		scheduleWindowsFileDrop()
 	}
 }
 

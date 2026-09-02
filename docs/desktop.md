@@ -115,10 +115,10 @@ Fallback: `go env -w GOPROXY=https://goproxy.io,direct`.
 
 ### Drag-and-drop
 
-Explorer drops use Wails `OnFileDrop` (real `D:\...` paths), including `.exe`.
-Wails v2.15 must **not** set `DisableWebViewDrop` on Windows: that calls
-`AllowExternalDrag(false)` and the drop never reaches JS. JS `preventDefault`
-stops WebView2 from opening the file. After `git pull`, rebuild.
+Explorer drops (`.go`, `.exe`, anything) are handled by a native OLE
+`IDropTarget` on the WebView2 child windows. WebView2’s own drop dest is
+disabled so it cannot steal or reject the drag. After `git pull`, rebuild
+with `pack-windows.ps1`.
 
 Click-to-pick uses the native Windows dialog (not AppleScript).
 

@@ -1,18 +1,16 @@
 package main
 
 import (
-	goruntime "runtime"
-
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 var guiApp *App
 
-// Wails v2.15: DisableWebViewDrop calls AllowExternalDrag(false) on Windows,
-// which blocks Explorer file drops entirely (EnableFileDrop never fires).
-// Linux/macOS still need it so the WebView does not navigate to the file.
+// Disable the WebView's own drop target on every OS. Linux/macOS would
+// otherwise open the file as a page. Windows WebView2 would steal OLE
+// drops; native IDropTarget on the Chrome child windows handles Explorer.
 func webViewDropDisabled() bool {
-	return goruntime.GOOS != "windows"
+	return true
 }
 
 func emitDroppedPaths(paths []string) {

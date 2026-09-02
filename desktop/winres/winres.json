@@ -2,7 +2,7 @@
   "RT_GROUP_ICON": {
     "APP": {
       "0000": [
-        "../build/appicon.ico"
+        "../build/appicon.png"
       ]
     }
   }

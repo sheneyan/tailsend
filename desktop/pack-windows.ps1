@@ -7,5 +7,7 @@ go build -tags production -ldflags "-H windowsgui" -o Tailsend.exe .
 if (-not (Get-Command go-winres -ErrorAction SilentlyContinue)) {
     go install github.com/tc-hib/go-winres@latest
 }
+# Use PNG, not the .ico — go-winres cannot decode PNG-compressed ICO
+# ("image: unknown format") and then leaves the default Windows icon.
 go-winres patch --in winres/winres.json --delete --no-backup .\Tailsend.exe
 Write-Host "built $PWD\Tailsend.exe"

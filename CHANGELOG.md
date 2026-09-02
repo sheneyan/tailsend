@@ -4,13 +4,9 @@
 
 ### Windows Explorer drop
 
-- Do not set `DisableWebViewDrop` on Windows (Wails v2.15 would call
-  `AllowExternalDrag(false)` and Explorer drops never reach `OnFileDrop`).
-- Capture-phase `drop` must not `stopPropagation` before WebView2
-  `postMessageWithAdditionalObjects`; otherwise `.go` / `.exe` drops never
-  reach Go. Apply the window icon at runtime (`WM_SETICON`) and stamp the PE
-  with `pack-windows.ps1` (`go-winres patch`) because CGO/gcc often drops
-  `.syso`. File picker was unaffected.
+- Native OLE `IDropTarget` on the WebView2 child HWNDs (JS/WebView2 drop
+  cannot see Explorer files). `go-winres patch` must use PNG, not PNG-in-ICO
+  (`image: unknown format`). Runtime `WM_SETICON` plus `pack-windows.ps1`.
 
 ### Windows GUI icon
 

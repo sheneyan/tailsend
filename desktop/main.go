@@ -30,10 +30,9 @@ func main() {
 		Bind:             []interface{}{app},
 		DragAndDrop: &options.DragAndDrop{
 			EnableFileDrop: true,
-			// Linux/macOS: stop the WebView from opening the dropped file.
-			// Windows (Wails v2.15): must stay false or AllowExternalDrag(false)
-			// swallows Explorer drops and OnFileDrop never runs. JS preventDefault
-			// still blocks WebView2 from navigating.
+			// WebView must not become the OLE/GTK drop dest (it would open the
+			// file or reject the drop). Linux re-installs a GTK dest; Windows
+			// registers IDropTarget on the WebView2 child HWNDs.
 			DisableWebViewDrop: webViewDropDisabled(),
 		},
 		Linux: &linux.Options{
