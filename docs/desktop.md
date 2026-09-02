@@ -131,11 +131,17 @@ then **Inbox** in the GUI, or `tailsend recv .` / `sudo tailscale file get .`.
 `tailscaled` often runs as root, so recv may need `sudo`.
 
 **Drag-and-drop:** WebKit must not *open* the dropped file (that replaces the
-UI with the file contents). Linux installs a GTK `text/uri-list` dest after
-startup. Rebuild after `git pull`. `libEGL` / `DRI3` `Permission denied` on
-`/dev/dri/renderD128` is GPU access; WebKit falls back to software. Inbox/UI
-still work. To quiet it: `sudo usermod -aG render,video $USER` then log out
-and back in.
+UI with the file contents). Linux installs a GTK `text/uri-list` dest on the
+window (not the WebView) and only accepts the drop on mouse-up. Rebuild after
+`git pull`.
+
+If a previous build left the mouse unable to click anywhere, the X11 pointer
+grab was still held: press **Escape**, or from another TTY/SSH run
+`killall Tailsend`. Then rebuild this version.
+
+`libEGL` / `DRI3` `Permission denied` on `/dev/dri/renderD128` is GPU access;
+WebKit falls back to software. Inbox/UI still work. To quiet it:
+`sudo usermod -aG render,video $USER` then log out and back in.
 
 ## After a successful send
 
