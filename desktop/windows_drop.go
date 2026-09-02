@@ -224,6 +224,9 @@ static void install_on_hwnd(HWND hwnd) {
 static BOOL CALLBACK enum_child(HWND child, LPARAM lp) {
 	(void)lp;
 	install_on_hwnd(child);
+	// Nested Chrome_RenderWidgetHostHWND is under the cursor, not the
+	// direct child of wailsWindow. EnumChildWindows is not recursive.
+	EnumChildWindows(child, enum_child, 0);
 	return TRUE;
 }
 
@@ -289,13 +292,37 @@ static BOOL CALLBACK find_wails_frame(HWND hwnd, LPARAM lp) {
 	return TRUE;
 }
 
+static WNDPROC g_old_proc = NULL;
+
+static LRESULT CALLBACK drop_fallback_proc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
+	if (msg == kInstallDropMsg) {
+		g_drop_tries = 0;
+		install_on_tree(hwnd);
+		SetTimer(hwnd, 0x5444, 250, install_drop_timer);
+		return 0;
+	}
+	if (msg == WM_DROPFILES) {
+		emit_hdrop((HDROP)w);
+		DragFinish((HDROP)w);
+		return 0;
+	}
+	if (g_old_proc != NULL) {
+		return CallWindowProcW(g_old_proc, hwnd, msg, w, l);
+	}
+	return DefWindowProcW(hwnd, msg, w, l);
+}
+
 void tailsendScheduleWindowsDrop(void) {
 	HWND frame = NULL;
 	EnumWindows(find_wails_frame, (LPARAM)&frame);
 	if (frame == NULL) {
 		return;
 	}
-	SetWindowSubclass(frame, drop_subclass, kSubclassID, 0);
+	if (!SetWindowSubclass(frame, drop_subclass, kSubclassID, 0)) {
+		if (g_old_proc == NULL) {
+			g_old_proc = (WNDPROC)SetWindowLongPtrW(frame, GWLP_WNDPROC, (LONG_PTR)drop_fallback_proc);
+		}
+	}
 	PostMessageW(frame, kInstallDropMsg, 0, 0);
 }
 */

@@ -131,6 +131,7 @@ import {
   PairingJSON,
   PairingQR,
   Platform,
+  TakeDroppedPaths,
 } from "../wailsjs/go/main/App";
 import { EventsOn, OnFileDrop, OnFileDropOff } from "../wailsjs/runtime/runtime";
 
@@ -150,6 +151,7 @@ const platform = ref("");
 const landed = ref(null);
 
 let timer = 0;
+let dropPoll = 0;
 let offProgress = () => {};
 let offDrop = () => {};
 
@@ -439,10 +441,17 @@ onMounted(async () => {
   OnFileDrop((_x, _y, paths) => addPaths(paths), false);
   window.addEventListener("dragover", onPageDragOver, true);
   window.addEventListener("drop", onPageDrop, true);
+  dropPoll = window.setInterval(async () => {
+    try {
+      const p = await TakeDroppedPaths();
+      if (p && p.length) addPaths(p);
+    } catch (_) {}
+  }, 400);
 });
 
 onUnmounted(() => {
   if (timer) clearInterval(timer);
+  if (dropPoll) clearInterval(dropPoll);
   offProgress();
   offDrop();
   OnFileDropOff();

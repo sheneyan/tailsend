@@ -179,3 +179,8 @@ func (a *App) PairingQR() (string, error) {
 func (a *App) Platform() string {
 	return goruntime.GOOS
 }
+
+// TakeDroppedPaths returns queued Explorer-drop paths (Windows OLE) and clears the queue.
+func (a *App) TakeDroppedPaths() []string {
+	return takePendingDropped()
+}
