@@ -122,10 +122,10 @@ static HRESULT STDMETHODCALLTYPE dtDrop(IDropTarget *this, IDataObject *obj,
 		*effect = DROPEFFECT_NONE;
 		return S_OK;
 	}
-	HDROP drop = (HDROP)GlobalLock(stg.hGlobal);
-	if (drop != NULL) {
-		emit_hdrop(drop);
-		GlobalUnlock(stg.hGlobal);
+	// HDROP is the HGLOBAL handle itself. GlobalLock returns a DROPFILES*
+	// pointer; DragQueryFileW expects the handle, not the locked pointer.
+	if (stg.tymed == TYMED_HGLOBAL && stg.hGlobal != NULL) {
+		emit_hdrop((HDROP)stg.hGlobal);
 	}
 	ReleaseStgMedium(&stg);
 	*effect = DROPEFFECT_COPY;
@@ -148,9 +148,29 @@ static int g_drop_tries = 0;
 static WNDPROC g_old_proc = NULL;
 static const UINT kInstallDropMsg = WM_APP + 0x54;
 
+static HWND g_drop_seen[256];
+static int g_drop_nseen = 0;
+
+static BOOL drop_already(HWND hwnd) {
+	for (int i = 0; i < g_drop_nseen; i++) {
+		if (g_drop_seen[i] == hwnd) {
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
 static void install_on_hwnd(HWND hwnd) {
+	if (hwnd == NULL || drop_already(hwnd)) {
+		return;
+	}
 	RevokeDragDrop(hwnd);
-	RegisterDragDrop(hwnd, &g_drop.idt);
+	HRESULT hr = RegisterDragDrop(hwnd, &g_drop.idt);
+	if (SUCCEEDED(hr) || hr == DRAGDROP_E_ALREADYREGISTERED) {
+		if (g_drop_nseen < 256) {
+			g_drop_seen[g_drop_nseen++] = hwnd;
+		}
+	}
 }
 
 static BOOL CALLBACK enum_child(HWND child, LPARAM lp) {
@@ -164,10 +184,12 @@ static void install_on_tree(HWND hwnd) {
 		return;
 	}
 	if (!g_ole_inited) {
-		if (FAILED(OleInitialize(NULL))) {
+		HRESULT ohr = OleInitialize(NULL);
+		if (SUCCEEDED(ohr) || ohr == RPC_E_CHANGED_MODE) {
+			g_ole_inited = TRUE;
+		} else {
 			return;
 		}
-		g_ole_inited = TRUE;
 	}
 	install_on_hwnd(hwnd);
 	EnumChildWindows(hwnd, enum_child, 0);

@@ -4,9 +4,9 @@
 
 ### Windows Explorer drop
 
-- Native OLE `IDropTarget` on the WebView2 child HWNDs (JS/WebView2 drop
-  cannot see Explorer files). `go-winres patch` must use PNG, not PNG-in-ICO
-  (`image: unknown format`). Runtime `WM_SETICON` plus `pack-windows.ps1`.
+- HDROP is the HGLOBAL handle (not a GlobalLock pointer). COM Drop
+  dispatches onto a Go goroutine. go-winres icon PNG is 256×256.
+  Taskbar/title-bar `WM_SETICON` retried on every process window.
 
 ### Windows GUI icon
 

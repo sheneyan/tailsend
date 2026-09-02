@@ -12,5 +12,7 @@ import "C"
 
 //export goWinDropped
 func goWinDropped(cpaths *C.char) {
-	emitDroppedPaths(splitPOSIXLines(C.GoString(cpaths)))
+	// COM Drop runs on the Windows UI thread, not a Go thread.
+	paths := append([]string(nil), splitPOSIXLines(C.GoString(cpaths))...)
+	go emitDroppedPaths(paths)
 }
