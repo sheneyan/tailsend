@@ -5,7 +5,7 @@ set -e
 cd "$(dirname "$0")"
 go-winres simply \
 	--arch amd64,arm64 \
-	--icon build/appicon.png \
+	--icon build/appicon.ico \
 	--manifest gui \
 	--product-name Tailsend \
 	--file-description "Send files over Tailscale Taildrop" \

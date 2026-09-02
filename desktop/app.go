@@ -47,6 +47,9 @@ func (a *App) startup(ctx context.Context) {
 	if goruntime.GOOS == "linux" {
 		scheduleLinuxFileDrop()
 	}
+	if goruntime.GOOS == "windows" {
+		scheduleWindowsWindowChrome()
+	}
 }
 
 func (a *App) emit(name string, data ...interface{}) {

@@ -13,7 +13,7 @@ Read this before `go build`. Most failures so far were one of these.
 |---|---|
 | macOS (raw binary) | `cd desktop && go build -tags production -o Tailsend .` |
 | macOS (Dock / no Terminal) | `cd desktop && make app` then `open Tailsend.app` |
-| Windows | `cd desktop && go build -tags production -ldflags "-H windowsgui" -o Tailsend.exe .` |
+| Windows | `cd desktop; .\pack-windows.ps1` (or `go build -tags production -ldflags "-H windowsgui" -o Tailsend.exe .`) |
 | Linux (Ubuntu 24 / webkit2gtk 4.1) | `cd desktop && go build -tags production,webkit2_41 -o Tailsend .` |
 | Linux (webkit2gtk 4.0 only) | `cd desktop && go build -tags production -o Tailsend .` |
 
@@ -193,12 +193,19 @@ installer. Double-clicking that binary looks unfinished:
 | macOS | Terminal pops open; generic Go icon | `cd desktop && make app` → `Tailsend.app` (Dock icon from `desktop/build/appicon.png`) |
 | Linux | Terminal if you launched from a shell; generic window icon | Copy `Tailsend.desktop` to `~/.local/share/applications/` and `build/appicon.png` to `~/.local/share/icons/hicolor/512x512/apps/tailsend.png`. `Terminal=false`. |
 
-Windows release-style build:
+Windows release-style build (no console + exe icon):
 
 ```powershell
 cd desktop
-go build -tags production -ldflags "-H windowsgui" -o Tailsend.exe .
+.\pack-windows.ps1
+.\Tailsend.exe
 ```
+
+`pack-windows.ps1` runs `go build` then `go-winres patch` so the paper-plane
+icon is in the PE. CGO/gcc often drops `.syso` resources, which is why a
+plain `go build` can show the default Windows icon again. The window also
+applies the icon at runtime. After `git pull`, rebuild; if Explorer still
+shows the old icon, copy `Tailsend.exe` to a new folder.
 
 macOS:
 

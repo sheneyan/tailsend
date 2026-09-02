@@ -302,10 +302,34 @@ function onPageDragOver(e) {
   e.dataTransfer.dropEffect = "copy";
 }
 
+function filesFromDrag(e) {
+  const dt = e.dataTransfer;
+  if (!dt) return [];
+  if (dt.items && dt.items.length) {
+    return [...dt.items].map((it) => (it.kind === "file" ? it.getAsFile() : null)).filter(Boolean);
+  }
+  if (dt.files && dt.files.length) return [...dt.files];
+  return [];
+}
+
+function webview2PostFiles(e) {
+  const wv = window.chrome?.webview;
+  if (!wv?.postMessageWithAdditionalObjects) return false;
+  const files = filesFromDrag(e);
+  if (!files.length) return false;
+  wv.postMessageWithAdditionalObjects(`file:drop:${e.x}:${e.y}`, files);
+  return true;
+}
+
 function onPageDrop(e) {
   if (!isFileDrag(e.dataTransfer)) return;
   e.preventDefault();
-  e.stopPropagation();
+  // Windows WebView2: do not stopPropagation before posting files — Wails
+  // OnFileDrop is a bubble listener. Prefer posting ourselves, then stop.
+  if (webview2PostFiles(e)) {
+    e.stopPropagation();
+    return;
+  }
   let uris = "";
   try {
     uris = e.dataTransfer.getData("text/uri-list");
