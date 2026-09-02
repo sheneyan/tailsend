@@ -114,8 +114,3 @@ import "C"
 func scheduleLinuxFileDrop() {
 	C.tailsendScheduleLinuxDrop()
 }
-
-//export goEmitDropped
-func goEmitDropped(cpaths *C.char) {
-	emitDroppedPaths(splitPOSIXLines(C.GoString(cpaths)))
-}
