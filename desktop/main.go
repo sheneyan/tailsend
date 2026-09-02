@@ -30,10 +30,11 @@ func main() {
 		Bind:             []interface{}{app},
 		DragAndDrop: &options.DragAndDrop{
 			EnableFileDrop: true,
-			// Prevent the WebView from navigating to a dropped file (Linux
-			// WebKit would otherwise replace the UI with the file contents).
-			// Linux re-installs a GTK uri-list dest in scheduleLinuxFileDrop.
-			DisableWebViewDrop: true,
+			// Linux/macOS: stop the WebView from opening the dropped file.
+			// Windows (Wails v2.15): must stay false or AllowExternalDrag(false)
+			// swallows Explorer drops and OnFileDrop never runs. JS preventDefault
+			// still blocks WebView2 from navigating.
+			DisableWebViewDrop: webViewDropDisabled(),
 		},
 		Linux: &linux.Options{
 			Icon:             appIcon,

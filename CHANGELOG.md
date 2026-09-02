@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Windows Explorer drop
+
+- Do not set `DisableWebViewDrop` on Windows (Wails v2.15 would call
+  `AllowExternalDrag(false)` and Explorer drops never reach `OnFileDrop`).
+  File picker was unaffected.
+
 ### Windows GUI icon
 
 - Embed `rsrc_windows_amd64.syso` / `rsrc_windows_arm64.syso` so `Tailsend.exe`
