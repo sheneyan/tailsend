@@ -62,18 +62,23 @@ binary onto your `PATH`.
 ### Desktop GUI
 
 Needs Go with CGO and the platform WebView. **Always** use `-tags production`.
+Ubuntu 24 also needs `webkit2_41` (Wails defaults to webkit2gtk-4.0; 24.04
+ships 4.1). Do **not** `sudo go build`. Do **not** use apt `golang-go`.
 
 ```bash
 git clone https://github.com/sheneyan/tailsend.git
 cd tailsend/desktop
-go build -tags production -o Tailsend .    # Windows: Tailsend.exe
+# macOS / Windows:
+go build -tags production -o Tailsend .          # Windows: Tailsend.exe
+# Ubuntu 24:
+# go build -tags production,webkit2_41 -o Tailsend .
 ./Tailsend
 ```
 
-Without the tag the binary starts then exits: `will not build without the
-correct build tags`.
+Without `-tags production` the binary starts then exits:
+`will not build without the correct build tags`.
 
-Platform notes (PATH, winget, GOPROXY, WebView2, GTK, drag-and-drop):
+Full checklist (Go tarball, PATH, winget, GOPROXY, WebView2, GTK, error table):
 **[docs/desktop.md](docs/desktop.md)**.
 
 The window lists named devices (no IP field). Add files (click, or drop onto
@@ -145,6 +150,8 @@ the same place as **Share → Tailscale** or `tailscale file cp`.
 | `proxy.golang.org` timeout | `go env -w GOPROXY=https://goproxy.cn,direct` — [docs/desktop.md](docs/desktop.md) |
 | Win: drop shows a corner hint, tray empty | Rebuild a build that disables WebView2 drop; use `git pull` |
 | Win: WebView2 `.cab` has no “Install” | That cab is Fixed Version (extract only). Use Evergreen `.exe` or the OS copy |
+| GUI: `Package webkit2gtk-4.0 was not found` | Ubuntu 24: `-tags production,webkit2_41` — [docs/desktop.md](docs/desktop.md) |
+| `invalid go version … must match format 1.23` | apt Go is too old; install https://go.dev/dl and put `/usr/local/go/bin` first |
 
 Exit codes: `0` ok, `2` daemon/login, `3` policy/target, `4` I/O or other.
 

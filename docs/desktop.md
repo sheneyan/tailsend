@@ -1,22 +1,62 @@
 # Building and using the desktop GUI
 
-The GUI lives in `desktop/` (Wails v2 + Vue). Always pass `-tags production`
-(or `-tags dev`). A plain `go build` succeeds but the app exits at runtime with
-`will not build without the correct build tags`.
+The GUI lives in `desktop/` (Wails v2 + Vue). The compiled frontend is already
+in `desktop/frontend/dist`; a normal rebuild does **not** need `npm`.
 
-```bash
-cd desktop
-go build -tags production -o Tailsend .   # Windows: Tailsend.exe
-```
+## Compilation notes
 
-`make run` in `desktop/` does the same on macOS/Linux.
+Read this before `go build`. Most failures so far were one of these.
+
+### Commands
+
+| OS | Command |
+|---|---|
+| macOS | `cd desktop && go build -tags production -o Tailsend .` |
+| Windows | `cd desktop && go build -tags production -o Tailsend.exe .` |
+| Linux (Ubuntu 24 / webkit2gtk 4.1) | `cd desktop && go build -tags production,webkit2_41 -o Tailsend .` |
+| Linux (webkit2gtk 4.0 only) | `cd desktop && go build -tags production -o Tailsend .` |
+
+Equivalent: `make run` on macOS; on Ubuntu 24 `make TAGS=production,webkit2_41 run`.
+
+### Do / do not
+
+- **Always** pass `-tags production` (or `-tags dev`). A plain `go build` links
+  but the app exits: `will not build without the correct build tags`.
+- On Ubuntu 24 also pass **`webkit2_41`**. Wails defaults to webkit2gtk-4.0;
+  24.04 ships 4.1. Missing the tag looks like `Package webkit2gtk-4.0 was not found`.
+- **Do not** `sudo go build` / `sudo go test`. Root uses a different `PATH` and
+  module cache; the binary will be owned by root.
+- **Do not** use Ubuntu `apt install golang-go`. It is too old. Need **Go 1.26+**
+  (this repo’s `tailscale.com` v1.102 requires 1.26.6). Install the official
+  tarball from https://go.dev/dl into `/usr/local/go` and put
+  `/usr/local/go/bin` **first** on `PATH`.
+- `go.work` / `go.mod` say `go 1.22` so old parsers can *read* the file. That
+  does not mean you can *compile* with Go 1.22.
+- CGO is required for the GUI (`gcc` / MinGW). The CLI in `cmd/tailsend` does
+  not need CGO.
+- Package names have **no trailing `~`**. `apt install libwebkit2gtk-4.1-dev~`
+  fails with `Unable to locate package`.
+- After `git pull`, rebuild. Running an old `./Tailsend` is the previous build.
+
+### If the compiler (or the binary) says…
+
+| Message / symptom | Fix |
+|---|---|
+| `will not build without the correct build tags` | Add `-tags production` (Linux 24: `production,webkit2_41`) |
+| `invalid go version '1.27.0': must match format 1.23` | Still on apt Go. `which go` must be `/usr/local/go/bin/go`, not `/usr/bin/go` |
+| `Package webkit2gtk-4.0 was not found` | Ubuntu 24: install `libwebkit2gtk-4.1-dev` and add `,webkit2_41` |
+| `Unable to locate package libwebkit2gtk-4.1-dev~` | Drop the `~`. Enable `universe` if 4.1 is missing: `sudo add-apt-repository universe` |
+| `gcc: command not found` / `cgo: C compiler "gcc" not found` | Linux: `sudo apt install gcc pkg-config`. Windows: MinGW on `PATH` (see below) |
+| `multiple definition of tailsendScheduleLinuxDrop` | Old tree; `git pull` — export and C bodies are split on `main` |
+| linker `UTType` / `_OBJC_CLASS_$_UTType` | Already handled by `desktop/link_darwin.go`; `git pull` |
+| `proxy.golang.org` / `dial tcp 142.250…:443` timeout | `go env -w GOPROXY=https://goproxy.cn,direct` and `GOSUMDB=sum.golang.google.cn` |
+| WebView2 `.cab` has no Install | That file is Fixed Version (extract only). Use Evergreen, not the `.cab` |
+| GUI starts then blank / GPU `libEGL` `Permission denied` on `/dev/dri/renderD128` | Software fallback; Inbox still works. Optional: `sudo usermod -aG render,video $USER` and log out |
 
 ## macOS
 
 WebKit is built in. Apple Silicon / recent Xcode may warn that
-`setShowsBaselineSeparator:` is deprecated; ignore it. If the **linker** fails
-on `UTType`, the repo already links `UniformTypeIdentifiers`
-(`desktop/link_darwin.go`).
+`setShowsBaselineSeparator:` is deprecated; ignore it.
 
 File **picker** uses AppleScript (`osascript choose file`), not a Wails sheet.
 Wails sheets close immediately on click in the WebView. Folders can still be
@@ -28,8 +68,7 @@ on the left.
 ## Windows 11
 
 Needs Go (CGO), `gcc`, and **Evergreen** WebView2 (Win11 usually already has
-it). Do **not** install `Microsoft.WebView2.FixedVersionRuntime.*.cab` — that
-cab is an extract-only runtime, not a right-click installer.
+it). Do **not** install `Microsoft.WebView2.FixedVersionRuntime.*.cab`.
 
 ### PATH
 
@@ -63,8 +102,6 @@ New terminal, then `go version` and `gcc --version`.
 
 ### Go module proxy (China / blocked Google)
 
-Default `proxy.golang.org` often times out (`dial tcp 142.250.x.x:443`).
-
 ```powershell
 go env -w GOPROXY=https://goproxy.cn,direct
 go env -w GOSUMDB=sum.golang.google.cn
@@ -88,17 +125,17 @@ Click-to-pick uses the native Windows dialog (not AppleScript).
 
 Needs GTK3 + WebKit **dev packages**, not GNOME. XFCE is fine.
 
-Ubuntu 24 ships **webkit2gtk-4.1**, while Wails v2 defaults to 4.0. Install 4.1
-and add the `webkit2_41` tag:
+### Packages
 
 ```bash
 sudo apt install -y gcc pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
 pkg-config --exists gtk+-3.0 webkit2gtk-4.1 && echo ok
 ```
 
-Ubuntu’s `apt install golang-go` is too old (often 1.22, sometimes older). This
-repo needs **Go 1.26+** because `tailscale.com` v1.102 requires `go 1.26.6`.
-Do **not** use `sudo go build`. Install the official tarball:
+If `apt` has no 4.1 package, install `libwebkit2gtk-4.0-dev` and **omit**
+`,webkit2_41` from the build tags.
+
+### Official Go (not apt)
 
 ```bash
 go version
@@ -118,26 +155,27 @@ go version   # go1.27.0
 If `go.work` errors with `must match format 1.23`, you are still on the apt
 binary: `/usr/bin/go` is ahead of `/usr/local/go/bin` in `PATH`.
 
+### Build and run
+
 ```bash
-cd tailsend/desktop
+cd tailsend
+git pull
+cd desktop
 go build -tags production,webkit2_41 -o Tailsend .
 ./Tailsend
 ```
-
-If `apt` has no 4.1 package, install `libwebkit2gtk-4.0-dev` and drop `,webkit2_41`.
 
 **Inbox:** Linux does not auto-save to Downloads. Send a file to this machine,
 then **Inbox** in the GUI, or `tailsend recv .` / `sudo tailscale file get .`.
 `tailscaled` often runs as root, so recv may need `sudo`.
 
-**Drag-and-drop:** WebKit must not *open* the dropped file (that replaces the
-UI with the file contents). Linux installs a GTK `text/uri-list` dest on the
-window (not the WebView) and only accepts the drop on mouse-up. Rebuild after
-`git pull`.
+**Drag-and-drop:** Drop onto the window and **release the mouse**. The file
+should appear in the left tray, not open as a WebKit page. Click-to-pick still
+works.
 
-If a previous build left the mouse unable to click anywhere, the X11 pointer
-grab was still held: press **Escape**, or from another TTY/SSH run
-`killall Tailsend`. Then rebuild this version.
+If an older build left the mouse unable to click anywhere, the X11 pointer grab
+was still held: press **Escape**, or from another TTY/SSH run `killall Tailsend`.
+Then rebuild this version.
 
 `libEGL` / `DRI3` `Permission denied` on `/dev/dri/renderD128` is GPU access;
 WebKit falls back to software. Inbox/UI still work. To quiet it:

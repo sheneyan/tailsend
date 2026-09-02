@@ -58,17 +58,22 @@ Windows：`go build -o tailsend.exe ./cmd/tailsend`。需要的话把二进制�
 ### 桌面 GUI
 
 必须加 `-tags production`，否则一点击运行会报
-`will not build without the correct build tags`。
+`will not build without the correct build tags`。Ubuntu 24 还要加
+`webkit2_41`（系统是 webkit2gtk 4.1，Wails 默认 4.0）。**不要** `sudo go build`，
+**不要**用 `apt install golang-go`。
 
 ```bash
 git clone https://github.com/sheneyan/tailsend.git
 cd tailsend/desktop
-go build -tags production -o Tailsend .    # Windows 用 Tailsend.exe
+# macOS / Windows:
+go build -tags production -o Tailsend .          # Windows 用 Tailsend.exe
+# Ubuntu 24:
+# go build -tags production,webkit2_41 -o Tailsend .
 ./Tailsend
 ```
 
-Windows 的 PATH、winget、GOPROXY、WebView2（不要用 Fixed Version 的 `.cab`）、
-拖放，以及 Ubuntu 依赖，见 **[docs/desktop.md](docs/desktop.md)**。
+编译注意事项（官方 Go、PATH、`~` 包名、WebView2、GTK、报错对照表）见
+**[docs/desktop.md](docs/desktop.md)**。
 
 窗口里是设备名网格。先加文件（点击或拖进窗口），再点设备。发完后会提示对端
 文件大概在哪（Windows 下载目录 / Linux 的 `tailsend recv .`）。**Inbox** 取
@@ -131,6 +136,9 @@ Linux 上 `tailscaled` 常以 root 运行，收件箱文件也归 root，可能�
 | 列表里没有，或 not a Taildrop target | 打了 tag、离线、或没有 PeerAPI |
 | `destination must end with ':'` | 写成 `pixel:` 而不是 `pixel` |
 | Linux `recv` 权限不够 | 用和 `tailscaled` 相同的用户（经常是 sudo） |
+| GUI：`Package webkit2gtk-4.0 was not found` | Ubuntu 24 用 `-tags production,webkit2_41`，见 [docs/desktop.md](docs/desktop.md) |
+| `invalid go version … must match format 1.23` | 还在用 apt 的 Go；装 https://go.dev/dl，保证 `which go` 是 `/usr/local/go/bin/go` |
+| `Unable to locate package libwebkit2gtk-4.1-dev~` | 包名不要带 `~` |
 
 退出码：`0` 成功，`2` daemon/登录，`3` 策略/目标，`4` 读写或其他错误。
 
