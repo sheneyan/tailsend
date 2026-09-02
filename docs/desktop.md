@@ -34,7 +34,7 @@ Equivalent: `make run` on macOS; on Ubuntu 24 `make TAGS=production,webkit2_41 r
 - `go.work` / `go.mod` say `go 1.22` so old parsers can *read* the file. That
   does not mean you can *compile* with Go 1.22.
 - CGO is required for the GUI (`gcc` / MinGW). The CLI in `cmd/tailsend` does
-  not need CGO.
+  not need CGO and is cross-compiled as `tailsend-cli-<os>-<arch>` (`make cli-all`).
 - Package names have **no trailing `~`**. `apt install libwebkit2gtk-4.1-dev~`
   fails with `Unable to locate package`.
 - After `git pull`, rebuild. Running an old `./Tailsend` is the previous build.

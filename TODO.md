@@ -19,8 +19,9 @@ Tailsend Phase 0–1 is a Taildrop shell on the official daemon. Do not mix
 tailcat into the named-device grid. A later mode could send to a `tc` address
 as an opt-in path.
 
-## Signed installers
+## Signed GUI installers
 
-GitHub Releases with signed `.dmg` / `.msi` / `.deb`. Until then, use
-`docs/desktop.md` **Packaging**: macOS `make app`, Windows `-H windowsgui`,
-Linux `.desktop` + icon.
+CLI zip/binaries ship on `v*` tags (`tailsend-cli-<os>-<arch>`). Signed GUI
+`.dmg` / `.msi` / `.deb` are still later. Until then, use `docs/desktop.md`
+**Packaging**: macOS `make app`, Windows `-H windowsgui`, Linux `.desktop` +
+icon.

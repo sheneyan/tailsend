@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### CLI packages
+
+- `make cli-all` / `scripts/build-cli.sh` cross-compiles
+  `dist/tailsend-cli-{darwin,linux,windows}-{amd64,arm64}` (Windows gets `.exe`)
+- Tag `v*` can attach those files to a GitHub Release. Copy
+  `scripts/github-release-cli.yml` to `.github/workflows/` (needs a token
+  with the `workflow` scope). The GUI is still built per-OS (CGO).
+
 ### Phase 1 — Desktop GUI
 
 - `tailsend pair [--qr]`: same pairing JSON as the GUI Pair phone button

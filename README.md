@@ -41,23 +41,39 @@ There is no `tailsend login`.
 
 ## Install
 
-Go 1.26+ (Tailscale’s module requires 1.26.6; developed on 1.27). Ubuntu apt
-`golang-go` is too old — install from https://go.dev/dl, not `apt`.
+### CLI (all platforms)
+
+The CLI has **no CGO**. Build all six with `make cli-all` →
+`dist/tailsend-cli-<os>-<arch>` (`darwin`/`linux`/`windows` × `amd64`/`arm64`).
+To attach them to a GitHub Release, copy `scripts/github-release-cli.yml` to
+`.github/workflows/` and push a `v*` tag (the first copy needs
+`gh auth refresh -s workflow`). Rename a binary to `tailsend` (or
+`tailsend.exe`) and put it on your `PATH`.
+
+```bash
+# macOS Apple Silicon
+chmod +x tailsend-cli-darwin-arm64 && mv tailsend-cli-darwin-arm64 /usr/local/bin/tailsend
+
+# Linux x86_64
+chmod +x tailsend-cli-linux-amd64 && sudo mv tailsend-cli-linux-amd64 /usr/local/bin/tailsend
+```
+
+Windows: `tailsend-cli-windows-amd64.exe` → `tailsend.exe`.
+
+From source, or `go install` (needs **Go 1.26+**; Ubuntu apt `golang-go` is too
+old):
 
 ```bash
 go install github.com/sheneyan/tailsend/cmd/tailsend@latest
-```
 
-From source:
-
-```bash
 git clone https://github.com/sheneyan/tailsend.git
 cd tailsend
-go build -o tailsend ./cmd/tailsend
+make cli                          # this machine
+make cli-all                      # dist/tailsend-cli-* for six OS/arch pairs
 ```
 
-On Windows, `go build -o tailsend.exe ./cmd/tailsend`. Optional: move the
-binary onto your `PATH`.
+The GUI (`Tailsend` / `Tailsend.exe`) is a separate CGO binary and **cannot**
+be cross-compiled this way — see [docs/desktop.md](docs/desktop.md).
 
 ### Desktop GUI
 

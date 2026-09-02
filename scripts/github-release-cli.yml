@@ -1,0 +1,67 @@
+name: Release CLI
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  cli:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: darwin
+            goarch: arm64
+            ext: ""
+          - goos: darwin
+            goarch: amd64
+            ext: ""
+          - goos: linux
+            goarch: amd64
+            ext: ""
+          - goos: linux
+            goarch: arm64
+            ext: ""
+          - goos: windows
+            goarch: amd64
+            ext: ".exe"
+          - goos: windows
+            goarch: arm64
+            ext: ".exe"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.x"
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          EXT: ${{ matrix.ext }}
+          CGO_ENABLED: "0"
+        run: |
+          mkdir -p dist
+          name="tailsend-cli-${GOOS}-${GOARCH}${EXT}"
+          go build -trimpath -ldflags "-s -w" -o "dist/${name}" ./cmd/tailsend
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tailsend-cli-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/tailsend-cli-*
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: cli
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/tailsend-cli-*
+          generate_release_notes: true

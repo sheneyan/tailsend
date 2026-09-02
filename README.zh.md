@@ -38,22 +38,36 @@ tailsend send ./photo.jpg pixel:
 
 ## 安装
 
-需要 Go 1.26+（依赖 `tailscale.com` v1.102 要求 1.26.6；开发环境是 1.27）。
-Ubuntu 的 `apt install golang-go` **版本不够**，请用 https://go.dev/dl 的官方包，不要 `sudo go build`。
+### CLI（多平台）
+
+CLI **不需要 CGO**。`make cli-all` 会在 `dist/` 下编出六个
+`tailsend-cli-<系统>-<架构>`（macOS / Linux / Windows × amd64 / arm64）。
+要挂到 GitHub Release：把 `scripts/github-release-cli.yml` 拷到
+`.github/workflows/`，再推 `v*` 标签（第一次需要
+`gh auth refresh -s workflow`）。改名为 `tailsend`（Windows 是 `tailsend.exe`）
+放到 `PATH` 即可。
+
+```bash
+# Apple Silicon
+chmod +x tailsend-cli-darwin-arm64 && mv tailsend-cli-darwin-arm64 /usr/local/bin/tailsend
+
+# Linux x86_64
+chmod +x tailsend-cli-linux-amd64 && sudo mv tailsend-cli-linux-amd64 /usr/local/bin/tailsend
+```
+
+源码或 `go install`（需要 **Go 1.26+**，不要用 apt 的 `golang-go`）：
 
 ```bash
 go install github.com/sheneyan/tailsend/cmd/tailsend@latest
-```
 
-从源码：
-
-```bash
 git clone https://github.com/sheneyan/tailsend.git
 cd tailsend
-go build -o tailsend ./cmd/tailsend
+make cli        # 当前这台机器
+make cli-all    # dist/ 下六个平台的 tailsend-cli-*
 ```
 
-Windows：`go build -o tailsend.exe ./cmd/tailsend`。需要的话把二进制放到 `PATH`。
+GUI（`Tailsend`）是另一份带 CGO 的程序，**不能**这样交叉编译，见
+[docs/desktop.md](docs/desktop.md)。
 
 ### 桌面 GUI
 
