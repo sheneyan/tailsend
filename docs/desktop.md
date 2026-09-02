@@ -189,7 +189,7 @@ installer. Double-clicking that binary looks unfinished:
 
 | OS | What you see | What to do |
 |---|---|---|
-| Windows | A console window behind the GUI | Build with `-ldflags "-H windowsgui"`. Current `main` also hides a console that *this* process owns (double-click). |
+| Windows | A console window behind the GUI; generic title-bar icon | Build with `-ldflags "-H windowsgui"`. Current `main` also hides a console that *this* process owns (double-click). The exe icon is `rsrc_windows_*.syso` (from `build/appicon.png`); rebuild after `git pull`. If Explorer still shows the old icon, copy the new exe to a new folder — Windows caches icons. |
 | macOS | Terminal pops open; generic Go icon | `cd desktop && make app` → `Tailsend.app` (Dock icon from `desktop/build/appicon.png`) |
 | Linux | Terminal if you launched from a shell; generic window icon | Copy `Tailsend.desktop` to `~/.local/share/applications/` and `build/appicon.png` to `~/.local/share/icons/hicolor/512x512/apps/tailsend.png`. `Terminal=false`. |
 
@@ -209,7 +209,8 @@ open Tailsend.app
 ```
 
 The window/taskbar/Dock icon is `desktop/build/appicon.png` (also used in
-About on macOS and as the GTK icon on Linux).
+About on macOS and as the GTK icon on Linux). On Windows it is compiled into
+`Tailsend.exe` via `rsrc_windows_amd64.syso` / `rsrc_windows_arm64.syso`.
 
 Signed `.dmg` / `.msi` / `.deb` GitHub Releases are **not** in Phase 1.
 `wails build` can produce platform packages later; it expects

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Windows GUI icon
+
+- Embed `rsrc_windows_amd64.syso` / `rsrc_windows_arm64.syso` so `Tailsend.exe`
+  uses the paper-plane icon in the title bar, taskbar, and Explorer.
+
 ### CLI packages
 
 - `make cli-all` / `scripts/build-cli.sh` cross-compiles

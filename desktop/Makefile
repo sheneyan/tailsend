@@ -1,4 +1,4 @@
-.PHONY: build run app
+.PHONY: build run app winres
 
 # Linux on Ubuntu 24: make TAGS=production,webkit2_41
 TAGS ?= production
@@ -15,3 +15,7 @@ run: build
 # macOS .app (Dock icon, no Terminal on double-click)
 app:
 	sh ./pack-macos.sh
+
+# Windows exe icon: rsrc_windows_amd64.syso / rsrc_windows_arm64.syso
+winres:
+	sh ./gen-winres.sh
