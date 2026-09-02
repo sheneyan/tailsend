@@ -16,6 +16,14 @@ package main
 
 extern void goWinDropped(char*);
 
+/* MinGW shellapi.h often omits DROPFILES unless extra SDK headers are present. */
+typedef struct TailsendDropFiles {
+	DWORD pFiles;
+	POINT pt;
+	BOOL fNC;
+	BOOL fWide;
+} TailsendDropFiles;
+
 typedef struct TailsendDropTarget {
 	IDropTarget idt;
 	LONG ref;
@@ -99,7 +107,7 @@ static void append_wide(char **out, size_t *len, size_t *cap, const wchar_t *w) 
 	}
 }
 
-static void emit_from_dropfiles(DROPFILES *df, char **out, size_t *len, size_t *cap) {
+static void emit_from_dropfiles(TailsendDropFiles *df, char **out, size_t *len, size_t *cap) {
 	if (df == NULL || df->pFiles == 0) {
 		return;
 	}
@@ -139,7 +147,7 @@ static void emit_hdrop(HDROP drop) {
 		append_wide(&out, &len, &cap, w);
 	}
 	if (len == 0) {
-		DROPFILES *df = (DROPFILES *)GlobalLock(drop);
+		TailsendDropFiles *df = (TailsendDropFiles *)GlobalLock(drop);
 		if (df != NULL) {
 			emit_from_dropfiles(df, &out, &len, &cap);
 			GlobalUnlock(drop);
