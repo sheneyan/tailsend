@@ -2,7 +2,7 @@
   <div class="shell" :class="{ darwin: platform === 'darwin' }" @dragover.prevent>
     <header class="top" style="--wails-draggable: drag">
       <div class="brand">
-        <span class="logo">↑</span>
+        <img class="logo" src="./appicon.png" alt="" />
         <div>
           <div class="title">Tailsend</div>
           <div class="sub" v-if="snap.self?.hostname">{{ snap.self.hostname }}</div>
@@ -68,12 +68,12 @@
             :disabled="sending"
             @click="sendTo(t)"
           >
-            <span class="avatar" :style="{ background: osColor(t.os) }">{{ osGlyph(t.os) }}</span>
+            <span class="avatar" :style="{ background: osColor(t.os) }"><OsIcon :os="t.os" /></span>
             <span class="name">{{ t.hostname || t.dnsName }}</span>
             <span class="meta">{{ t.os }} · {{ t.online ? "online" : "offline" }}</span>
           </button>
           <div v-for="t in blocked" :key="t.stableID" class="card muted" :title="t.reason">
-            <span class="avatar dim">{{ osGlyph(t.os) }}</span>
+            <span class="avatar dim"><OsIcon :os="t.os" /></span>
             <span class="name">{{ t.hostname || t.dnsName }}</span>
             <span class="meta">{{ t.reason || "not a Taildrop target" }}</span>
           </div>
@@ -120,6 +120,7 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from "vue";
+import OsIcon from "./OsIcon.vue";
 import {
   Snapshot,
   SendTo,
@@ -190,15 +191,6 @@ const recvDirLabel = computed(() => {
   return parts[parts.length - 1] || recvDir.value;
 });
 
-function osGlyph(os) {
-  const s = (os || "").toLowerCase();
-  if (s.includes("mac") || s === "darwin") return "";
-  if (s.includes("win")) return "⊞";
-  if (s.includes("android")) return "▶";
-  if (s.includes("ios")) return "●";
-  if (s.includes("linux")) return "◆";
-  return "?";
-}
 function osColor(os) {
   const s = (os || "").toLowerCase();
   if (s.includes("mac") || s === "ios" || s === "darwin") return "#6b7280";
@@ -462,11 +454,7 @@ onUnmounted(() => {
   width: 32px;
   height: 32px;
   border-radius: 10px;
-  background: var(--accent);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-weight: 700;
+  display: block;
 }
 .title {
   font-weight: 650;
@@ -580,13 +568,17 @@ onUnmounted(() => {
   opacity: 0.45;
 }
 .avatar {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 12px;
   display: grid;
   place-items: center;
   color: #fff;
-  font-size: 16px;
+}
+.avatar :deep(.os-mark) {
+  width: 22px;
+  height: 22px;
+  display: block;
 }
 .avatar.dim {
   background: #3a4150;

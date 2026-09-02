@@ -7,6 +7,7 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/linux"
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
 )
 
@@ -34,11 +35,17 @@ func main() {
 			// Linux re-installs a GTK uri-list dest in scheduleLinuxFileDrop.
 			DisableWebViewDrop: true,
 		},
+		Linux: &linux.Options{
+			Icon:             appIcon,
+			ProgramName:      "Tailsend",
+			WebviewGpuPolicy: linux.WebviewGpuPolicyNever,
+		},
 		Mac: &mac.Options{
 			TitleBar: mac.TitleBarHiddenInset(),
 			About: &mac.AboutInfo{
 				Title:   "Tailsend",
 				Message: "Send files over Tailscale Taildrop.",
+				Icon:    appIcon,
 			},
 		},
 	})

@@ -10,6 +10,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/sheneyan/tailsend/internal/tsdrop"
+	"github.com/skip2/go-qrcode"
 )
 
 const usage = `tailsend — send files over Tailscale Taildrop
@@ -21,12 +22,15 @@ receive Taildrop unless ACL grants allow it.
 Usage:
   tailsend status
   tailsend list [--json]
+  tailsend pair [--qr]
   tailsend send <file-or-dir...> <device>:
   tailsend inbox
   tailsend recv [dir] [--watch] [--conflict=skip|overwrite|rename]
 
 The send destination must end with a colon (like scp / tailscale file cp).
 Device names come from 'tailsend list'; you do not need an IP address.
+'pair' prints the same JSON the GUI Pair phone button encodes (for a later
+mobile app). --qr also draws a terminal QR of that JSON.
 `
 
 func main() {
@@ -47,6 +51,8 @@ func run(args []string, c *tsdrop.Client, stdout, stderr io.Writer) int {
 		return cmdStatus(ctx, c, stdout, stderr)
 	case "list":
 		return cmdList(ctx, c, args[1:], stdout, stderr)
+	case "pair":
+		return cmdPair(ctx, c, args[1:], stdout, stderr)
 	case "send":
 		return cmdSend(ctx, c, args[1:], stdout, stderr)
 	case "inbox":
@@ -96,12 +102,7 @@ func cmdList(ctx context.Context, c *tsdrop.Client, args []string, stdout, stder
 		return 2
 	}
 	if *asJSON {
-		b, err := c.ExportTargetsJSON(ctx)
-		if err != nil {
-			return fail(stderr, err)
-		}
-		fmt.Fprintln(stdout, string(b))
-		return 0
+		return printPairJSON(ctx, c, stdout, stderr)
 	}
 	targets, err := c.Targets(ctx)
 	if err != nil {
@@ -129,6 +130,38 @@ func cmdList(ctx context.Context, c *tsdrop.Client, args []string, stdout, stder
 		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", name, t.OS, online, taildrop)
 	}
 	tw.Flush()
+	return 0
+}
+
+func printPairJSON(ctx context.Context, c *tsdrop.Client, stdout, stderr io.Writer) int {
+	b, err := c.ExportTargetsJSON(ctx)
+	if err != nil {
+		return fail(stderr, err)
+	}
+	fmt.Fprintln(stdout, string(b))
+	return 0
+}
+
+func cmdPair(ctx context.Context, c *tsdrop.Client, args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("pair", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	asQR := fs.Bool("qr", false, "also print a terminal QR of the pairing JSON")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	b, err := c.ExportTargetsJSON(ctx)
+	if err != nil {
+		return fail(stderr, err)
+	}
+	if *asQR {
+		qr, err := qrcode.New(string(b), qrcode.Medium)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		fmt.Fprint(stdout, qr.ToSmallString(false))
+		fmt.Fprintln(stdout)
+	}
+	fmt.Fprintln(stdout, string(b))
 	return 0
 }
 

@@ -84,8 +84,8 @@ Full checklist (Go tarball, PATH, winget, GOPROXY, WebView2, GTK, error table):
 The window lists named devices (no IP field). Add files (click, or drop onto
 the window), then click a device. After a send, the UI says where the file
 should land (Downloads vs Linux inbox commands). **Inbox** drains the
-Tailscale inbox. **Pair phone** is a QR of sendable targets for a later
-mobile app.
+Tailscale inbox. **Pair phone** (GUI) and `tailsend pair [--qr]` (CLI) export sendable
+targets for a later mobile app.
 
 ## Usage
 
@@ -93,6 +93,7 @@ mobile app.
 tailsend status
 tailsend list                          # named devices; no IP required
 tailsend list --json                   # sendable targets as JSON
+tailsend pair [--qr]                   # same JSON as GUI Pair phone; --qr draws it
 tailsend send <file-or-dir...> <device>:
 tailsend inbox                         # waiting files (Linux / inbox mode)
 tailsend recv [dir] [--watch] [--conflict=skip|overwrite|rename]
@@ -182,6 +183,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/architecture.md](docs/architect
 3. **Phase 2** — Android sender
 4. **Phase 3** — iOS sender
 5. **Phase 4** — Share-sheet polish, resume UX
+
+Open items that are *not* Phase 1 (receive progress, tailcat, signed
+installers) live in [TODO.md](TODO.md).
 
 ## License
 

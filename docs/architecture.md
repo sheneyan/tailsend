@@ -59,9 +59,11 @@ the inbox entry. Conflict policy: `skip` | `overwrite` | `rename`.
 
 ## Later phases (not in this tree)
 
-- **Desktop GUI:** Wails over the same `tsdrop` client. Named-device grid from
-  `Targets()`, no IP field on the home screen.
+Desktop GUI is Phase 1 (`desktop/`). Pairing payload is `tailsend pair` /
+`list --json` / the GUI **Pair phone** button.
+
 - **Android / iOS:** cannot call LocalAPI (sandbox). Send with HTTP PUT to
   `http://<tailscale-ip>:<peerapi>/v0/put/<file>` while the system Tailscale
   VPN is up. Discovery via `tskey-api` device list + port probe, or QR of
-  `tailsend list --json`. Receive stays in the official Tailscale app.
+  `tailsend pair`. Receive stays in the official Tailscale app.
+- Receive-side progress, tailcat, signed installers: [TODO.md](../TODO.md).

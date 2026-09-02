@@ -4,6 +4,8 @@
 .DS_Store
 /dist/
 desktop/Tailsend
-desktop/build/
+desktop/Tailsend.app
+desktop/build/bin/
+desktop/build/*.iconset
 desktop/frontend/node_modules/
 node_modules/

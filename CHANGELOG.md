@@ -4,6 +4,11 @@
 
 ### Phase 1 — Desktop GUI
 
+- `tailsend pair [--qr]`: same pairing JSON as the GUI Pair phone button
+- Device cards use distinct per-OS icons (macOS / Windows / Linux / Android / iOS)
+- App icon (`desktop/build/appicon.png`); macOS `make app` builds `Tailsend.app`
+- Windows: hide the extra console when the GUI is double-clicked
+- Linux: `Tailsend.desktop` + GTK window icon
 - Wails v2 + Vue window: named-device grid, file drop/picker, send progress
 - Inbox drawer (save to Downloads / chosen folder)
 - Pair-phone QR of sendable targets

@@ -64,6 +64,52 @@ func TestCLIListJSON(t *testing.T) {
 	}
 }
 
+func TestCLIPairJSON(t *testing.T) {
+	c, _ := running(t, &ipnstate.PeerStatus{
+		ID:             "n-phone",
+		HostName:       "pixel",
+		DNSName:        "pixel.tailnet.ts.net.",
+		OS:             "android",
+		Online:         true,
+		PeerAPIURL:     []string{"http://100.64.0.2:1"},
+		TaildropTarget: ipnstate.TaildropTargetAvailable,
+	})
+	var listOut, pairOut bytes.Buffer
+	if code := run([]string{"list", "--json"}, c, &listOut, ioDiscard()); code != 0 {
+		t.Fatalf("list exit %d: %s", code, listOut.String())
+	}
+	if code := run([]string{"pair"}, c, &pairOut, ioDiscard()); code != 0 {
+		t.Fatalf("pair exit %d: %s", code, pairOut.String())
+	}
+	if strings.TrimSpace(listOut.String()) != strings.TrimSpace(pairOut.String()) {
+		t.Fatalf("pair JSON != list --json\nlist: %s\npair: %s", listOut.String(), pairOut.String())
+	}
+}
+
+func TestCLIPairQR(t *testing.T) {
+	c, _ := running(t, &ipnstate.PeerStatus{
+		ID:             "n-phone",
+		HostName:       "pixel",
+		DNSName:        "pixel.tailnet.ts.net.",
+		OS:             "android",
+		Online:         true,
+		PeerAPIURL:     []string{"http://100.64.0.2:1"},
+		TaildropTarget: ipnstate.TaildropTargetAvailable,
+	})
+	var out bytes.Buffer
+	code := run([]string{"pair", "--qr"}, c, &out, ioDiscard())
+	if code != 0 {
+		t.Fatalf("exit %d: %s", code, out.String())
+	}
+	s := out.String()
+	if !strings.Contains(s, `"hostname": "pixel"`) {
+		t.Fatalf("qr output missing JSON: %s", s)
+	}
+	if !strings.ContainsAny(s, "█▀▄ ") {
+		t.Fatalf("qr output missing terminal QR: %s", s)
+	}
+}
+
 func TestCLISendRequiresColon(t *testing.T) {
 	c, _ := running(t)
 	var errb bytes.Buffer

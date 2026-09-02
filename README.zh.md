@@ -77,7 +77,11 @@ go build -tags production -o Tailsend .          # Windows 用 Tailsend.exe
 
 窗口里是设备名网格。先加文件（点击或拖进窗口），再点设备。发完后会提示对端
 文件大概在哪（Windows 下载目录 / Linux 的 `tailsend recv .`）。**Inbox** 取
-daemon 收件箱。
+daemon 收件箱。GUI 的 **Pair phone** 和命令行 `tailsend pair [--qr]` 是同一份
+配对 JSON（给后续手机 App）。
+
+双击 GUI 若弹出控制台、图标是默认 Go 图标：见
+[docs/desktop.md](docs/desktop.md) 的 Packaging。macOS 用 `cd desktop && make app`。
 
 ## 用法
 
@@ -85,6 +89,7 @@ daemon 收件箱。
 tailsend status
 tailsend list                          # 设备名，不用填 IP
 tailsend list --json                   # 可发送目标的 JSON
+tailsend pair [--qr]                   # 和 GUI Pair phone 同一份 JSON；--qr 画终端二维码
 tailsend send <file-or-dir...> <device>:
 tailsend inbox                         # Linux 等 inbox 模式的待取文件
 tailsend recv [dir] [--watch] [--conflict=skip|overwrite|rename]

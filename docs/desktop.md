@@ -11,8 +11,9 @@ Read this before `go build`. Most failures so far were one of these.
 
 | OS | Command |
 |---|---|
-| macOS | `cd desktop && go build -tags production -o Tailsend .` |
-| Windows | `cd desktop && go build -tags production -o Tailsend.exe .` |
+| macOS (raw binary) | `cd desktop && go build -tags production -o Tailsend .` |
+| macOS (Dock / no Terminal) | `cd desktop && make app` then `open Tailsend.app` |
+| Windows | `cd desktop && go build -tags production -ldflags "-H windowsgui" -o Tailsend.exe .` |
 | Linux (Ubuntu 24 / webkit2gtk 4.1) | `cd desktop && go build -tags production,webkit2_41 -o Tailsend .` |
 | Linux (webkit2gtk 4.0 only) | `cd desktop && go build -tags production -o Tailsend .` |
 
@@ -180,6 +181,39 @@ Then rebuild this version.
 `libEGL` / `DRI3` `Permission denied` on `/dev/dri/renderD128` is GPU access;
 WebKit falls back to software. Inbox/UI still work. To quiet it:
 `sudo usermod -aG render,video $USER` then log out and back in.
+
+## Packaging (no extra console, real app icon)
+
+`go build` of the GUI is a **development binary**. It is not a signed
+installer. Double-clicking that binary looks unfinished:
+
+| OS | What you see | What to do |
+|---|---|---|
+| Windows | A console window behind the GUI | Build with `-ldflags "-H windowsgui"`. Current `main` also hides a console that *this* process owns (double-click). |
+| macOS | Terminal pops open; generic Go icon | `cd desktop && make app` → `Tailsend.app` (Dock icon from `desktop/build/appicon.png`) |
+| Linux | Terminal if you launched from a shell; generic window icon | Copy `Tailsend.desktop` to `~/.local/share/applications/` and `build/appicon.png` to `~/.local/share/icons/hicolor/512x512/apps/tailsend.png`. `Terminal=false`. |
+
+Windows release-style build:
+
+```powershell
+cd desktop
+go build -tags production -ldflags "-H windowsgui" -o Tailsend.exe .
+```
+
+macOS:
+
+```bash
+cd desktop
+make app          # or: sh ./pack-macos.sh
+open Tailsend.app
+```
+
+The window/taskbar/Dock icon is `desktop/build/appicon.png` (also used in
+About on macOS and as the GTK icon on Linux).
+
+Signed `.dmg` / `.msi` / `.deb` GitHub Releases are **not** in Phase 1.
+`wails build` can produce platform packages later; it expects
+`desktop/build/appicon.png`.
 
 ## After a successful send
 

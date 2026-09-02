@@ -2,7 +2,10 @@ module github.com/sheneyan/tailsend
 
 go 1.22
 
-require tailscale.com v1.102.3
+require (
+	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
+	tailscale.com v1.102.3
+)
 
 require (
 	filippo.io/edwards25519 v1.2.0 // indirect
