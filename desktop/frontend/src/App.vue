@@ -285,6 +285,42 @@ function addPaths(...args) {
   }
 }
 
+function urisToPaths(uriList) {
+  const out = [];
+  for (const line of String(uriList || "").split(/\r?\n/)) {
+    const u = line.trim();
+    if (!u || u.startsWith("#")) continue;
+    if (!u.toLowerCase().startsWith("file:")) continue;
+    let p = decodeURIComponent(u.replace(/^file:\/\/(localhost)?/i, ""));
+    if (/^\/[A-Za-z]:\//.test(p)) p = p.slice(1).replace(/\//g, "\\");
+    if (p) out.push(p);
+  }
+  return out;
+}
+
+function isFileDrag(dt) {
+  if (!dt?.types) return false;
+  const types = [...dt.types];
+  return types.includes("Files") || types.includes("text/uri-list");
+}
+
+function onPageDragOver(e) {
+  if (!isFileDrag(e.dataTransfer)) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "copy";
+}
+
+function onPageDrop(e) {
+  if (!isFileDrag(e.dataTransfer)) return;
+  e.preventDefault();
+  e.stopPropagation();
+  let uris = "";
+  try {
+    uris = e.dataTransfer.getData("text/uri-list");
+  } catch (_) {}
+  if (uris) addPaths(urisToPaths(uris));
+}
+
 async function refresh() {
   try {
     snap.value = await Snapshot();
@@ -385,6 +421,8 @@ onMounted(async () => {
   });
   offDrop = EventsOn("files-dropped", (...args) => addPaths(...args));
   OnFileDrop((_x, _y, paths) => addPaths(paths), false);
+  window.addEventListener("dragover", onPageDragOver, true);
+  window.addEventListener("drop", onPageDrop, true);
 });
 
 onUnmounted(() => {
@@ -392,6 +430,8 @@ onUnmounted(() => {
   offProgress();
   offDrop();
   OnFileDropOff();
+  window.removeEventListener("dragover", onPageDragOver, true);
+  window.removeEventListener("drop", onPageDrop, true);
 });
 </script>
 

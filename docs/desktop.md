@@ -130,10 +130,12 @@ If `apt` has no 4.1 package, install `libwebkit2gtk-4.0-dev` and drop `,webkit2_
 then **Inbox** in the GUI, or `tailsend recv .` / `sudo tailscale file get .`.
 `tailscaled` often runs as root, so recv may need `sudo`.
 
-**Drag-and-drop:** keep `DisableWebViewDrop` off on Linux (GTK will not receive
-drops if the dest is unset). Rebuild after `git pull`. `libEGL` / `DRI3`
-`Permission denied` on `/dev/dri/renderD128` is GPU access; WebKit falls back
-to software. Inbox/UI still work. To quiet it: `sudo usermod -aG render,video $USER` then log out and back in.
+**Drag-and-drop:** WebKit must not *open* the dropped file (that replaces the
+UI with the file contents). Linux installs a GTK `text/uri-list` dest after
+startup. Rebuild after `git pull`. `libEGL` / `DRI3` `Permission denied` on
+`/dev/dri/renderD128` is GPU access; WebKit falls back to software. Inbox/UI
+still work. To quiet it: `sudo usermod -aG render,video $USER` then log out
+and back in.
 
 ## After a successful send
 

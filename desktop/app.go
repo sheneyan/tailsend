@@ -34,14 +34,19 @@ func NewApp(c *tsdrop.Client) *App {
 	if c == nil {
 		c = tsdrop.New(nil)
 	}
-	return &App{client: c}
+	a := &App{client: c}
+	guiApp = a
+	return a
 }
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	runtime.OnFileDrop(ctx, func(x, y int, paths []string) {
-		runtime.EventsEmit(ctx, "files-dropped", paths)
+		emitDroppedPaths(paths)
 	})
+	if goruntime.GOOS == "linux" {
+		scheduleLinuxFileDrop()
+	}
 }
 
 func (a *App) emit(name string, data ...interface{}) {

@@ -3,7 +3,6 @@ package main
 import (
 	"embed"
 	"log"
-	goruntime "runtime"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -30,9 +29,10 @@ func main() {
 		Bind:             []interface{}{app},
 		DragAndDrop: &options.DragAndDrop{
 			EnableFileDrop: true,
-			// Windows: stop WebView2 from eating the drop (corner overlay, no paths).
-			// Linux: must stay false — true calls gtk_drag_dest_unset and drops never fire.
-			DisableWebViewDrop: goruntime.GOOS == "windows",
+			// Prevent the WebView from navigating to a dropped file (Linux
+			// WebKit would otherwise replace the UI with the file contents).
+			// Linux re-installs a GTK uri-list dest in scheduleLinuxFileDrop.
+			DisableWebViewDrop: true,
 		},
 		Mac: &mac.Options{
 			TitleBar: mac.TitleBarHiddenInset(),
