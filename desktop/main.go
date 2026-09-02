@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"log"
+	goruntime "runtime"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -29,10 +30,9 @@ func main() {
 		OnStartup:        app.startup,
 		Bind:             []interface{}{app},
 		DragAndDrop: &options.DragAndDrop{
-			EnableFileDrop: true,
-			// WebView must not become the OLE/GTK drop dest (it would open the
-			// file or reject the drop). Linux re-installs a GTK dest; Windows
-			// registers IDropTarget on the WebView2 child HWNDs.
+			// Windows: click-to-pick only (Explorer drop is in TODO.md).
+			EnableFileDrop: goruntime.GOOS != "windows",
+			// Stop the WebView from opening a dropped file as a page.
 			DisableWebViewDrop: webViewDropDisabled(),
 		},
 		Linux: &linux.Options{

@@ -31,7 +31,7 @@
       <aside class="side">
         <div class="section-label">1. Files to send</div>
         <div class="drop" @click="pickFiles">
-          <p v-if="!files.length">Drop files here, or click to choose.</p>
+          <p v-if="!files.length">{{ platform === "windows" ? "Click to choose files." : "Drop files here, or click to choose." }}</p>
           <ul v-else>
             <li v-for="(f, i) in files" :key="f.path">
               <span class="fname">{{ f.name }}</span>
@@ -51,7 +51,7 @@
           <p v-if="landed.body">{{ landed.body }}</p>
           <pre v-if="landed.commands?.length" class="cmds">{{ landed.commands.join("\n") }}</pre>
         </div>
-        <p class="hint">Click to pick files, or drop files/folders on this window. Then tap a device.</p>
+        <p class="hint">{{ platform === "windows" ? "Click to pick files, then tap a device." : "Click to pick files, or drop files/folders on this window. Then tap a device." }}</p>
       </aside>
 
       <section class="grid-wrap">
@@ -131,7 +131,6 @@ import {
   PairingJSON,
   PairingQR,
   Platform,
-  TakeDroppedPaths,
 } from "../wailsjs/go/main/App";
 import { EventsOn, OnFileDrop, OnFileDropOff } from "../wailsjs/runtime/runtime";
 
@@ -151,7 +150,6 @@ const platform = ref("");
 const landed = ref(null);
 
 let timer = 0;
-let dropPoll = 0;
 let offProgress = () => {};
 let offDrop = () => {};
 
@@ -438,25 +436,22 @@ onMounted(async () => {
     };
   });
   offDrop = EventsOn("files-dropped", (...args) => addPaths(...args));
-  OnFileDrop((_x, _y, paths) => addPaths(paths), false);
-  window.addEventListener("dragover", onPageDragOver, true);
-  window.addEventListener("drop", onPageDrop, true);
-  dropPoll = window.setInterval(async () => {
-    try {
-      const p = await TakeDroppedPaths();
-      if (p && p.length) addPaths(p);
-    } catch (_) {}
-  }, 400);
+  if (platform.value !== "windows") {
+    OnFileDrop((_x, _y, paths) => addPaths(paths), false);
+    window.addEventListener("dragover", onPageDragOver, true);
+    window.addEventListener("drop", onPageDrop, true);
+  }
 });
 
 onUnmounted(() => {
   if (timer) clearInterval(timer);
-  if (dropPoll) clearInterval(dropPoll);
   offProgress();
   offDrop();
-  OnFileDropOff();
-  window.removeEventListener("dragover", onPageDragOver, true);
-  window.removeEventListener("drop", onPageDrop, true);
+  if (platform.value !== "windows") {
+    OnFileDropOff();
+    window.removeEventListener("dragover", onPageDragOver, true);
+    window.removeEventListener("drop", onPageDrop, true);
+  }
 });
 </script>
 

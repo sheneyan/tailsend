@@ -25,6 +25,3 @@ export function PairingQR() {
 export function Platform() {
   return window.go.main.App.Platform();
 }
-export function TakeDroppedPaths() {
-  return window.go.main.App.TakeDroppedPaths();
-}

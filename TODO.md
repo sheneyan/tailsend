@@ -1,5 +1,15 @@
 # Later (not Phase 1)
 
+## Windows Explorer drag-and-drop
+
+Windows GUI is click-to-pick only. Explorer drop into the WebView2 window
+fought Wails `AllowExternalDrag`, OLE `IDropTarget` on nested Chrome HWNDs,
+and unsigned-binary Defender heuristics (window subclassing looked like a
+hook). Revisit without `SetWindowLongPtr` / `SetWindowSubclass`: either a
+future Wails version that does not call `AllowExternalDrag(false)` when
+`EnableFileDrop` is on, or a signed build plus a drop target that does not
+replace the window procedure.
+
 ## Receive-side transfer progress
 
 The sender already has a progress bar. The receiver does not, because Taildrop

@@ -113,14 +113,11 @@ go build -tags production -o Tailsend.exe .
 
 Fallback: `go env -w GOPROXY=https://goproxy.io,direct`.
 
-### Drag-and-drop
+### Adding files
 
-Explorer drops (`.go`, `.exe`, anything) are handled by a native OLE
-`IDropTarget` on the WebView2 child windows. WebView2’s own drop dest is
-disabled so it cannot steal or reject the drag. After `git pull`, rebuild
-with `pack-windows.ps1`.
-
-Click-to-pick uses the native Windows dialog (not AppleScript).
+Click the left pane and use the native Windows file dialog. Explorer
+drag-and-drop is **not** in this build (WebView2 + Defender false positives
+on window hooking). Tracked in [TODO.md](../TODO.md).
 
 ## Linux (Ubuntu 24 + XFCE is fine)
 

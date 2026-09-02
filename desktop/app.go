@@ -41,15 +41,16 @@ func NewApp(c *tsdrop.Client) *App {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-	runtime.OnFileDrop(ctx, func(x, y int, paths []string) {
-		emitDroppedPaths(paths)
-	})
+	if goruntime.GOOS != "windows" {
+		runtime.OnFileDrop(ctx, func(x, y int, paths []string) {
+			emitDroppedPaths(paths)
+		})
+	}
 	if goruntime.GOOS == "linux" {
 		scheduleLinuxFileDrop()
 	}
 	if goruntime.GOOS == "windows" {
 		scheduleWindowsWindowChrome()
-		scheduleWindowsFileDrop()
 	}
 }
 
@@ -178,9 +179,4 @@ func (a *App) PairingQR() (string, error) {
 // Platform is the GUI OS, for inbox-hint copy.
 func (a *App) Platform() string {
 	return goruntime.GOOS
-}
-
-// TakeDroppedPaths returns queued Explorer-drop paths (Windows OLE) and clears the queue.
-func (a *App) TakeDroppedPaths() []string {
-	return takePendingDropped()
 }
