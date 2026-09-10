@@ -19,6 +19,15 @@ fun isPairJsonFilename(name: String): Boolean {
     return base.equals(PAIR_JSON_NAME, ignoreCase = true)
 }
 
+/** True when a share/open-with payload is pairing JSON, not a file to send. */
+fun looksLikePairShare(name: String, mime: String?): Boolean {
+    if (isPairJsonFilename(name)) return true
+    val n = name.substringAfterLast('/').substringAfterLast('\\').lowercase()
+    if (n.endsWith(".json")) return true
+    val m = mime.orEmpty().lowercase().substringBefore(';').trim()
+    return m == "application/json" || m == "text/json" || m == "text/plain"
+}
+
 fun peerAPIPorts(ip: String): List<Int> = peerAPIPorts(InetAddress.getByName(ip))
 
 fun peerAPIPorts(ip: InetAddress): List<Int> {

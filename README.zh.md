@@ -121,7 +121,7 @@ daemon 收件箱。GUI 的 **Pair phone** 是给手机扫的**精简 QR**（本�
 1. 电脑：Tailsend → **Pair phone**。手机：**Pair → Scan QR**。
 2. 之后可 **Refresh from hostname**（MagicDNS 短名），该电脑的 Tailsend 窗口
    要开着；用 Tailsend 打开官方 Tailscale 收到的 `tailsend-pair.json`。
-3. 选文件，点设备。
+3. 选文件（或从相册/文件管理器 **分享 → Tailsend**），点设备。
 
 详见 [android/README.md](android/README.md)。
 

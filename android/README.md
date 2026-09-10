@@ -18,8 +18,13 @@ camera can read, rebuild that computer’s GUI (`./scripts/build.sh gui`). Why:
    Tailsend window is open → **Refresh from hostname**. Wait for official
    Tailscale to notify `tailsend-pair.json`, then open it in Tailsend.
    If the GUI is closed, Scan QR.
-3. Pick files (SAF). Tap a device.
+3. Pick files (SAF), or **Share → Tailsend** from Gallery / Files (single or
+   multiple). Then tap a device.
 4. HTTP PUT `{peerAPIURL}/v0/put/<file>` on the tailnet.
+
+The share sheet lists Tailsend for any MIME (`SEND` / `SEND_MULTIPLE`). A
+`tailsend-pair.json` share still imports pairing; other files go to the send
+tray. After installing, open Tailsend once if it does not appear yet.
 
 OS marks are PNG files (same art as the desktop GUI), not emoji.
 

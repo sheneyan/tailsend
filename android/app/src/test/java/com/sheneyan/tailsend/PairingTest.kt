@@ -76,6 +76,16 @@ class PairingTest {
     }
 
     @Test
+    fun looksLikePairShareOnlyForJsonLike() {
+        assertTrue(looksLikePairShare("tailsend-pair.json", "application/json"))
+        assertTrue(looksLikePairShare("list.json", "application/json"))
+        assertTrue(looksLikePairShare("note.txt", "text/plain"))
+        assertTrue(!looksLikePairShare("photo.jpg", "image/jpeg"))
+        assertTrue(!looksLikePairShare("clip.mp4", "video/mp4"))
+        assertTrue(!looksLikePairShare("doc.pdf", "application/pdf"))
+    }
+
+    @Test
     fun putUrlJoinsPeerAPI() {
         assertEquals(
             "http://100.64.0.1:41641/v0/put/photo.jpg",

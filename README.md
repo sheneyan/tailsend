@@ -131,7 +131,7 @@ Official Tailscale VPN must be connected. Receive stays in that app.
 1. Computer: Tailsend → **Pair phone**. Phone: **Pair → Scan QR**.
 2. Later: **Refresh from hostname** (MagicDNS short name) while that computer’s
    Tailsend window is open; open the Tailscale `tailsend-pair.json` in Tailsend.
-3. Pick files, tap a device.
+3. Pick files (or **Share → Tailsend** from another app), tap a device.
 
 Details: [android/README.md](android/README.md).
 

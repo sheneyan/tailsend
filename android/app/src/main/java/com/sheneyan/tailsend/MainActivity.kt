@@ -54,45 +54,94 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
-        handleImportIntent(intent)
+        handleIncomingIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleImportIntent(intent)
+        handleIncomingIntent(intent)
     }
 
-    private fun handleImportIntent(intent: Intent?) {
+    private fun handleIncomingIntent(intent: Intent?) {
         if (intent == null) return
-        val uri: Uri? = when (intent.action) {
-            Intent.ACTION_VIEW -> intent.data
+        when (intent.action) {
+            Intent.ACTION_VIEW -> {
+                val uri = intent.data ?: return
+                if (looksLikePairShare(displayName(uri), intent.type)) {
+                    importPairUri(uri)
+                } else {
+                    takeRead(uri)
+                    vm.setFiles(listOf(uri))
+                }
+            }
             Intent.ACTION_SEND -> {
-                @Suppress("DEPRECATION")
-                intent.getParcelableExtra(Intent.EXTRA_STREAM)
+                val uri = extraStream(intent)
+                if (uri != null) {
+                    if (looksLikePairShare(displayName(uri), intent.type)) {
+                        importPairUri(uri)
+                    } else {
+                        takeRead(uri)
+                        vm.setFiles(listOf(uri))
+                    }
+                    return
+                }
+                val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+                if (!text.isNullOrBlank()) {
+                    try {
+                        parsePairingJson(text)
+                        vm.importRaw(text)
+                    } catch (_: Exception) {
+                        // text/clipboard share is out of scope
+                    }
+                }
             }
-            else -> null
-        }
-        if (uri == null) {
-            val text = intent.getStringExtra(Intent.EXTRA_TEXT)
-            if (!text.isNullOrBlank() && (intent.action == Intent.ACTION_SEND || intent.action == Intent.ACTION_VIEW)) {
-                vm.importRaw(text)
+            Intent.ACTION_SEND_MULTIPLE -> {
+                val uris = extraStreams(intent)
+                if (uris.size == 1 && looksLikePairShare(displayName(uris[0]), intent.type)) {
+                    importPairUri(uris[0])
+                    return
+                }
+                if (uris.isNotEmpty()) {
+                    uris.forEach(::takeRead)
+                    vm.setFiles(uris)
+                }
             }
-            return
         }
-        val name = displayName(uri)
+    }
+
+    private fun extraStream(intent: Intent): Uri? {
+        @Suppress("DEPRECATION")
+        return intent.getParcelableExtra(Intent.EXTRA_STREAM)
+    }
+
+    private fun extraStreams(intent: Intent): List<Uri> {
+        @Suppress("DEPRECATION")
+        val list = intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)
+        return list?.filterNotNull().orEmpty()
+    }
+
+    private fun takeRead(uri: Uri) {
+        try {
+            contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        } catch (_: SecurityException) {
+            // Share-sheet grants are often one-shot; FLAG_GRANT_READ_URI_PERMISSION on the intent is enough.
+        }
+    }
+
+    private fun importPairUri(uri: Uri) {
         val raw = try {
             contentResolver.openInputStream(uri)?.bufferedReader()?.readText()
         } catch (_: Exception) {
             null
         }
         if (raw.isNullOrBlank()) return
-        if (name.isNotEmpty() && !isPairJsonFilename(name)) {
-            try {
-                parsePairingJson(raw)
-            } catch (_: Exception) {
-                return
-            }
+        try {
+            parsePairingJson(raw)
+        } catch (_: Exception) {
+            takeRead(uri)
+            vm.setFiles(listOf(uri))
+            return
         }
         vm.importRaw(raw)
     }

@@ -7,6 +7,7 @@
 - `android/`: paste pairing JSON, pick files, PUT `{peerAPIURL}/v0/put/<file>`
 - Pairing JSON includes the pairing computer first (`ExportTargetsJSON`)
 - Android can scan the Pair phone QR (CameraX + ZXing); paste is debug-only
+- Android appears in the system share sheet (`SEND` / `SEND_MULTIPLE`, `*/*`)
 - Pair → Refresh from hostname: PUT `tailsend-list-please` to that PC’s
   PeerAPI; open GUI PushFile’s `tailsend-pair.json` (open-with on the phone).
   First import and closed-GUI fallback remain Scan QR.
