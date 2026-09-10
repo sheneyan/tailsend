@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/base64"
+	"encoding/binary"
 	"net/netip"
 	"os"
 	"path/filepath"
@@ -77,6 +78,37 @@ func TestSnapshotNeedsLogin(t *testing.T) {
 	}
 }
 
+func TestSnapshotHandlesListPlease(t *testing.T) {
+	d := &tsdroptest.Daemon{
+		BackendState: "Running",
+		Self: &ipnstate.PeerStatus{
+			ID:           "n-self",
+			HostName:     "macbook",
+			DNSName:      "macbook.tailnet.ts.net.",
+			OS:           "macOS",
+			Online:       true,
+			TailscaleIPs: []netip.Addr{netip.MustParseAddr("100.64.0.1")},
+			PeerAPIURL:   []string{"http://100.64.0.1:41641"},
+		},
+		Peers: []*ipnstate.PeerStatus{phone()},
+		Inbox: map[string][]byte{
+			tsdrop.ListPleaseName: []byte(`{"v":1,"from":["100.64.0.2"]}`),
+			"note.txt":            []byte("keep"),
+		},
+	}
+	app := NewApp(tsdrop.New(d.LocalClient(t)))
+	snap := app.Snapshot()
+	if snap.Error != "" {
+		t.Fatalf("error = %s", snap.Error)
+	}
+	if len(d.Puts) != 1 || d.Puts[0].Name != tsdrop.PairJSONName || d.Puts[0].Target != "n-phone" {
+		t.Fatalf("puts = %+v", d.Puts)
+	}
+	if len(snap.Inbox) != 1 || snap.Inbox[0].Name != "note.txt" {
+		t.Fatalf("inbox = %+v", snap.Inbox)
+	}
+}
+
 func TestSendTo(t *testing.T) {
 	d := &tsdroptest.Daemon{
 		BackendState: "Running",
@@ -93,6 +125,31 @@ func TestSendTo(t *testing.T) {
 	}
 	if len(d.Puts) != 1 || string(d.Puts[0].Body) != "hello" {
 		t.Fatalf("puts = %+v", d.Puts)
+	}
+}
+
+func TestPairingJSONIncludesSelf(t *testing.T) {
+	d := &tsdroptest.Daemon{
+		BackendState: "Running",
+		Self: &ipnstate.PeerStatus{
+			ID:           "n-self",
+			HostName:     "macbook",
+			PeerAPIURL:   []string{"http://100.64.0.1:41641"},
+			Online:       true,
+			TailscaleIPs: []netip.Addr{netip.MustParseAddr("100.64.0.1")},
+		},
+		Peers: []*ipnstate.PeerStatus{phone()},
+	}
+	app := NewApp(tsdrop.New(d.LocalClient(t)))
+	js, err := app.PairingJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(js, `"hostname": "macbook"`) || !strings.Contains(js, `"hostname": "pixel"`) {
+		t.Fatalf("json = %s", js)
+	}
+	if strings.Index(js, "macbook") > strings.Index(js, "pixel") {
+		t.Fatalf("self should be first: %s", js)
 	}
 }
 
@@ -117,6 +174,10 @@ func TestPairingQR(t *testing.T) {
 	}
 	if len(raw) < 40 || string(raw[:8]) != "\x89PNG\r\n\x1a\n" {
 		t.Fatalf("not a png, len=%d", len(raw))
+	}
+	width := binary.BigEndian.Uint32(raw[16:20])
+	if width < 768 {
+		t.Fatalf("qr png width = %d, want >= 768 (220px UI of a dense 512px QR is unscannable)", width)
 	}
 }
 

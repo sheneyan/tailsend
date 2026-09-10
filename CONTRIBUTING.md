@@ -9,6 +9,7 @@
 ```bash
 git clone https://github.com/sheneyan/tailsend.git
 cd tailsend
+./scripts/build.sh            # cheat sheet (cli / gui / android)
 go test ./...
 go test ./desktop
 go build -o tailsend ./cmd/tailsend
@@ -31,6 +32,7 @@ go test ./...
 go test ./desktop
 gofmt -w .
 go vet ./...
+# Android (optional): ./scripts/build.sh android   # or ANDROID_HOME=... ./android/gradlew -p android :app:test :app:assembleDebug
 ```
 
 If `proxy.golang.org` times out (common in China):
@@ -45,11 +47,18 @@ fails without your production change.
 
 ## Scope
 
-Phase 0–1 are CLI + `internal/tsdrop` + Wails GUI. Please do not land Android
-or iOS in the same PR unless that phase is underway.
+Phase 0–1 are CLI + `internal/tsdrop` + Wails GUI. Phase 2 Android lives in
+`android/`. Please do not land iOS in the same PR unless that phase is underway.
 
 Keep send/receive on Taildrop / LocalAPI. Do not add a parallel custom
 transfer protocol.
+
+Do not embed `tsnet` / libtailscale on any surface (CLI, GUI, Android, iOS).
+Do not document unofficial ways to install Tailscale (App Store region
+switching, sideloaded IPAs, third-party apps that bundle a Tailscale node).
+The official iOS client is not listed in mainland China, Russia, or Belarus;
+that stays the user’s problem, not a Tailsend feature. See
+[docs/taildrop.md](docs/taildrop.md#official-tailscale-only).
 
 ## Commit style
 

@@ -72,6 +72,8 @@ func (a *App) Snapshot() Snapshot {
 	if st != tsdrop.Running {
 		return snap
 	}
+	_ = a.client.HandleListPlease(ctx)
+	_ = a.client.DrainListPleaseDir(ctx, a.DefaultRecvDir())
 	targets, err := a.client.Targets(ctx)
 	if err != nil {
 		snap.Error = err.Error()
@@ -154,7 +156,7 @@ func (a *App) ReceiveTo(dir, conflict string) ([]string, error) {
 	return a.client.Receive(a.requestCtx(), dir, c)
 }
 
-// PairingJSON is the sendable-target list for a phone to import.
+// PairingJSON is the mobile pairing payload (this node first, then sendable peers).
 func (a *App) PairingJSON() (string, error) {
 	b, err := a.client.ExportTargetsJSON(a.requestCtx())
 	if err != nil {
@@ -163,13 +165,18 @@ func (a *App) PairingJSON() (string, error) {
 	return string(b), nil
 }
 
-// PairingQR returns a PNG data URL of PairingJSON.
+// PairingQR returns a PNG data URL of a compact pairing snapshot.
+// Pretty JSON is too dense for cameras (version-40 at 220px CSS).
 func (a *App) PairingQR() (string, error) {
-	payload, err := a.PairingJSON()
+	payload, err := a.client.ExportTargetsQRJSON(a.requestCtx())
 	if err != nil {
 		return "", err
 	}
-	png, err := qrcode.Encode(payload, qrcode.Medium, 512)
+	q, err := qrcode.New(string(payload), qrcode.Low)
+	if err != nil {
+		return "", err
+	}
+	png, err := q.PNG(1024)
 	if err != nil {
 		return "", err
 	}

@@ -25,6 +25,7 @@ func running(t *testing.T, peers ...*ipnstate.PeerStatus) (*tsdrop.Client, *tsdr
 			OS:           "macOS",
 			Online:       true,
 			TailscaleIPs: []netip.Addr{netip.MustParseAddr("100.64.0.1")},
+			PeerAPIURL:   []string{"http://100.64.0.1:41641"},
 		},
 		Peers: peers,
 	}
@@ -59,8 +60,9 @@ func TestCLIListJSON(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit %d: %s", code, out.String())
 	}
-	if !strings.Contains(out.String(), `"hostname": "pixel"`) {
-		t.Fatalf("json: %s", out.String())
+	s := out.String()
+	if !strings.Contains(s, `"hostname": "pixel"`) || !strings.Contains(s, `"hostname": "macbook"`) {
+		t.Fatalf("json: %s", s)
 	}
 }
 

@@ -7,10 +7,14 @@ in `desktop/frontend/dist`; a normal rebuild does **not** need `npm`.
 
 Read this before `go build`. Most failures so far were one of these.
 
+From the repo root, `./scripts/build.sh` (Windows: `scripts\build.ps1`) prints
+the cheat sheet. `./scripts/build.sh gui` packs the GUI for **this** OS.
+
 ### Commands
 
 | OS | Command |
 |---|---|
+| any (this machine) | `./scripts/build.sh gui` from repo root |
 | macOS (raw binary) | `cd desktop && go build -tags production -o Tailsend .` |
 | macOS (.app + .dmg) | `cd desktop && make dmg` → `Tailsend.app` and `dist-release/Tailsend.dmg` |
 | Windows | `cd desktop; powershell -ExecutionPolicy Bypass -File .\pack-windows.ps1` |
@@ -179,6 +183,18 @@ Then rebuild this version.
 WebKit falls back to software. Inbox/UI still work. To quiet it:
 `sudo usermod -aG render,video $USER` then log out and back in.
 
+## Pair phone
+
+**Pair phone** encodes a compact QR (`ExportTargetsQRJSON`: minified
+hostname/os/stableID/peerAPIURL, Low ECC, 1024px, shown around 360px). Pretty
+JSON is behind **Debug: JSON**. After `git pull`, run `./scripts/build.sh gui`
+(or the pack script on that OS) before scanning; an old pretty-printed QR is
+too dense for the system camera and WeChat.
+
+The GUI must stay **open** for Android **Refresh from hostname**: it consumes
+`tailsend-list-please` from the Linux inbox or `~/Downloads` and PushFile’s
+`tailsend-pair.json`. Tailscale-only on the PC is not enough.
+
 ## Release packages
 
 GUI binaries **cannot be cross-compiled** (CGO / WebView). Build each
@@ -188,10 +204,11 @@ CLI zip/binaries are separate: `make cli-all` → repo-root `dist/tailsend-cli-*
 
 | Artifact | Build machine | Command | Output |
 |---|---|---|---|
+| native GUI package | this OS | `./scripts/build.sh gui` from repo root | see rows below |
 | `Tailsend.dmg` (unsigned, contains `.app` + Applications link) | macOS | `cd desktop && make dmg` | `desktop/dist-release/Tailsend.dmg` also `desktop/Tailsend.app` |
 | `Tailsend.exe` | Windows | `cd desktop` then `powershell -ExecutionPolicy Bypass -File .\pack-windows.ps1` | `desktop/Tailsend.exe` and `desktop/dist-release/Tailsend.exe` |
 | `tailsend-gui-linux-amd64.tar.gz` | Linux | `cd desktop && sh ./pack-linux.sh` | `desktop/dist-release/*.tar.gz` |
-| `tailsend-cli-<os>-<arch>` | any | `make cli-all` from repo root | `dist/` |
+| `tailsend-cli-<os>-<arch>` | any | `./scripts/build.sh cli-all` or `make cli-all` | `dist/` |
 
 macOS: `Tailsend.app` is the local app (double-click, Dock icon). The **dmg**
 is what you copy to Downloads or attach to a GitHub Release. It is **not

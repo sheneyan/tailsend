@@ -253,22 +253,33 @@ func reasonFor(p *ipnstate.PeerStatus) string {
 	}
 }
 
-// ExportTargetsJSON is the mobile pairing payload: sendable targets only.
+// ExportTargetsJSON is the mobile pairing payload.
+//
+// The pairing node (Status.Self) is first when it has a PeerAPI URL, so a
+// phone can PUT back to the machine showing the QR. Remaining entries are
+// sendable peers (empty Reason). Desktop Targets() still omits self.
 func (c *Client) ExportTargetsJSON(ctx context.Context) ([]byte, error) {
-	all, err := c.Targets(ctx)
+	sendable, err := c.pairingTargets(ctx)
 	if err != nil {
 		return nil, err
 	}
-	var sendable []Target
-	for _, t := range all {
-		if t.Reason == "" {
-			sendable = append(sendable, t)
-		}
-	}
-	if sendable == nil {
-		sendable = []Target{}
-	}
 	return json.MarshalIndent(sendable, "", "  ")
+}
+
+func (c *Client) pairingSelf(ctx context.Context) (Target, bool, error) {
+	st, err := c.LC.Status(ctx)
+	if err != nil {
+		return Target{}, false, mapError(err)
+	}
+	if st.Self == nil {
+		return Target{}, false, nil
+	}
+	t := targetFromPeer(st.Self)
+	if t.PeerAPIURL == "" {
+		return Target{}, false, nil
+	}
+	t.Reason = ""
+	return t, true, nil
 }
 
 // Lookup finds a target by hostname, MagicDNS, StableID, or Tailscale IP.
@@ -419,6 +430,9 @@ func convertWaiting(wfs []apitype.WaitingFile) []WaitingFile {
 
 // Receive copies inbox files into destDir and deletes them from the inbox.
 func (c *Client) Receive(ctx context.Context, destDir string, conflict Conflict) ([]string, error) {
+	if err := c.HandleListPlease(ctx); err != nil {
+		return nil, err
+	}
 	wfs, err := c.LC.WaitingFiles(ctx)
 	if err != nil {
 		return nil, mapError(err)

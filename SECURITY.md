@@ -18,6 +18,8 @@ push files through Tailscale’s existing Taildrop path.
 - Paste `tskey-auth-` / `tskey-api-` / tailnet policy files into issues
 - Open LocalAPI to the network
 - Run untrusted binaries as root just to drain the Linux inbox
+- Ask this project for unofficial Tailscale install paths (region-switched
+  stores, sideloaded IPAs, or apps that embed a Tailscale node)
 
 ## Reporting
 

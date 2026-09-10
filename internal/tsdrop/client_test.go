@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/netip"
 	"os"
@@ -50,6 +51,7 @@ func runningDaemon(peers ...*ipnstate.PeerStatus) *tsdroptest.Daemon {
 			OS:           "macOS",
 			Online:       true,
 			TailscaleIPs: []netip.Addr{netip.MustParseAddr("100.64.0.1")},
+			PeerAPIURL:   []string{"http://100.64.0.1:41641"},
 		},
 		Peers: peers,
 	}
@@ -289,7 +291,89 @@ func TestExportTargetsJSON(t *testing.T) {
 	if err := json.Unmarshal(b, &got); err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != 1 || got[0].Hostname != "pixel" || got[0].PeerAPIURL == "" {
+	if len(got) != 2 {
+		t.Fatalf("len = %d json = %s", len(got), b)
+	}
+	if got[0].Hostname != "macbook" || got[0].StableID != "n-self" || got[0].PeerAPIURL == "" {
+		t.Fatalf("self first: %s", b)
+	}
+	if got[1].Hostname != "pixel" || got[1].PeerAPIURL == "" {
+		t.Fatalf("peer: %s", b)
+	}
+}
+
+func TestExportTargetsQRJSONIsCompactAndCapped(t *testing.T) {
+	d := runningDaemon(phonePeer())
+	c := tsdrop.New(d.LocalClient(t))
+	pretty, err := c.ExportTargetsJSON(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	compact, err := c.ExportTargetsQRJSON(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(compact, []byte("\n")) {
+		t.Fatalf("QR JSON should be minified: %s", compact)
+	}
+	if bytes.Contains(compact, []byte(`"dnsName"`)) || bytes.Contains(compact, []byte(`"ips"`)) {
+		t.Fatalf("QR JSON should drop dnsName/ips: %s", compact)
+	}
+	if len(compact) >= len(pretty) {
+		t.Fatalf("compact %d should be smaller than pretty %d", len(compact), len(pretty))
+	}
+	var got []tsdrop.Target
+	if err := json.Unmarshal(compact, &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got[0].Hostname != "macbook" || got[0].PeerAPIURL == "" || got[1].Hostname != "pixel" {
+		t.Fatalf("compact = %s", compact)
+	}
+}
+
+func TestCompactPairingQRJSONCapsSizeKeepsFirst(t *testing.T) {
+	var ts []tsdrop.Target
+	for i := 0; i < 40; i++ {
+		ts = append(ts, tsdrop.Target{
+			StableID:   fmt.Sprintf("n-%02d-longid", i),
+			Hostname:   fmt.Sprintf("host-%02d.example", i),
+			DNSName:    fmt.Sprintf("host-%02d.tailnet.ts.net", i),
+			OS:         "linux",
+			PeerAPIURL: fmt.Sprintf("http://100.64.0.%d:41641", i+1),
+		})
+	}
+	b, err := tsdrop.CompactPairingQRJSON(ts, 500)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(b) > 500 {
+		t.Fatalf("len = %d, want <= 500: %s", len(b), b)
+	}
+	var got []tsdrop.Target
+	if err := json.Unmarshal(b, &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) < 1 || got[0].Hostname != "host-00.example" {
+		t.Fatalf("should keep first target: %s", b)
+	}
+	if len(got) >= 40 {
+		t.Fatal("should drop overflow targets so the QR stays scannable")
+	}
+}
+
+func TestExportTargetsJSONOmitsSelfWithoutPeerAPI(t *testing.T) {
+	d := runningDaemon(phonePeer())
+	d.Self.PeerAPIURL = nil
+	c := tsdrop.New(d.LocalClient(t))
+	b, err := c.ExportTargetsJSON(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []tsdrop.Target
+	if err := json.Unmarshal(b, &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].Hostname != "pixel" {
 		t.Fatalf("json = %s", b)
 	}
 }
@@ -316,5 +400,93 @@ func TestDNSNameTrim(t *testing.T) {
 	}
 	if strings.HasSuffix(got[0].DNSName, ".") {
 		t.Fatalf("DNSName should drop trailing dot, got %q", got[0].DNSName)
+	}
+}
+
+func TestPeerAPIPortsIPv4(t *testing.T) {
+	ip := netip.MustParseAddr("100.64.0.1")
+	got := tsdrop.PeerAPIPorts(ip)
+	want := []uint16{58436, 36467, 45098, 55837, 52376}
+	if len(got) != len(want) {
+		t.Fatalf("len = %d, want %d: %v", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("ports = %v, want %v", got, want)
+		}
+	}
+}
+
+func TestHandleListPleaseRepliesToFromIP(t *testing.T) {
+	d := runningDaemon(phonePeer())
+	c := tsdrop.New(d.LocalClient(t))
+	d.Inbox[tsdrop.ListPleaseName] = []byte(`{"v":1,"from":["100.64.0.2"]}`)
+	if err := c.HandleListPlease(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := d.Inbox[tsdrop.ListPleaseName]; ok {
+		t.Fatal("command file should be deleted")
+	}
+	if len(d.Puts) != 1 {
+		t.Fatalf("puts = %d, want 1: %+v", len(d.Puts), d.Puts)
+	}
+	if d.Puts[0].Target != "n-phone" || d.Puts[0].Name != tsdrop.PairJSONName {
+		t.Fatalf("put = %+v", d.Puts[0])
+	}
+	var got []tsdrop.Target
+	if err := json.Unmarshal(d.Puts[0].Body, &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) < 1 || got[0].Hostname != "macbook" {
+		t.Fatalf("pairing json = %s", d.Puts[0].Body)
+	}
+}
+
+func TestHandleListPleaseMissingFromNoPut(t *testing.T) {
+	d := runningDaemon(phonePeer())
+	c := tsdrop.New(d.LocalClient(t))
+	d.Inbox[tsdrop.ListPleaseName] = []byte(`{"v":1}`)
+	if err := c.HandleListPlease(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if len(d.Puts) != 0 {
+		t.Fatalf("puts = %+v", d.Puts)
+	}
+	if _, ok := d.Inbox[tsdrop.ListPleaseName]; ok {
+		t.Fatal("command file should be deleted")
+	}
+}
+
+func TestHandleListPleaseUnknownIPNoPut(t *testing.T) {
+	d := runningDaemon(phonePeer())
+	c := tsdrop.New(d.LocalClient(t))
+	d.Inbox[tsdrop.ListPleaseName] = []byte(`{"v":1,"from":["100.64.0.99"]}`)
+	if err := c.HandleListPlease(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if len(d.Puts) != 0 {
+		t.Fatalf("puts = %+v", d.Puts)
+	}
+	if _, ok := d.Inbox[tsdrop.ListPleaseName]; ok {
+		t.Fatal("command file should be deleted")
+	}
+}
+
+func TestDrainListPleaseDir(t *testing.T) {
+	d := runningDaemon(phonePeer())
+	c := tsdrop.New(d.LocalClient(t))
+	dir := t.TempDir()
+	path := filepath.Join(dir, tsdrop.ListPleaseName)
+	if err := os.WriteFile(path, []byte(`{"v":1,"from":["100.64.0.2"]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.DrainListPleaseDir(context.Background(), dir); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("file still there: %v", err)
+	}
+	if len(d.Puts) != 1 || d.Puts[0].Name != tsdrop.PairJSONName || d.Puts[0].Target != "n-phone" {
+		t.Fatalf("puts = %+v", d.Puts)
 	}
 }

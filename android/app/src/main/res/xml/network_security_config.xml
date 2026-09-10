@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PeerAPI is HTTP on Tailscale 100.x / fd7a: addresses. No CIDR in this
+     file format, so cleartext is allowed. Tailsend does not embed a node. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

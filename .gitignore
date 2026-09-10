@@ -11,3 +11,10 @@ desktop/build/bin/
 desktop/build/*.iconset
 desktop/frontend/node_modules/
 node_modules/
+android/.gradle/
+android/.kotlin/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+*.iml

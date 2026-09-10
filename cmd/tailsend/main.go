@@ -29,8 +29,8 @@ Usage:
 
 The send destination must end with a colon (like scp / tailscale file cp).
 Device names come from 'tailsend list'; you do not need an IP address.
-'pair' prints the same JSON the GUI Pair phone button encodes (for a later
-mobile app). --qr also draws a terminal QR of that JSON.
+'pair' prints the same JSON the GUI Pair phone button encodes (pairing
+node first, then sendable peers). --qr also draws a terminal QR of that JSON.
 `
 
 func main() {
@@ -154,7 +154,11 @@ func cmdPair(ctx context.Context, c *tsdrop.Client, args []string, stdout, stder
 		return fail(stderr, err)
 	}
 	if *asQR {
-		qr, err := qrcode.New(string(b), qrcode.Medium)
+		compact, err := c.ExportTargetsQRJSON(ctx)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		qr, err := qrcode.New(string(compact), qrcode.Low)
 		if err != nil {
 			return fail(stderr, err)
 		}

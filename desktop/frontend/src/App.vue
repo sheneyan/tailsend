@@ -71,7 +71,7 @@
             :disabled="sending"
             @click="sendTo(t)"
           >
-            <span class="avatar" :style="{ background: osColor(t.os) }"><OsIcon :os="t.os" /></span>
+            <span class="avatar"><OsIcon :os="t.os" /></span>
             <span class="name">{{ t.hostname || t.dnsName }}</span>
             <span class="meta">{{ t.os }} · {{ t.online ? "online" : "offline" }}</span>
           </button>
@@ -112,10 +112,13 @@
           <strong>Pair phone</strong>
           <button class="ghost" @click="pairOpen = false">Close</button>
         </div>
-        <p class="hint">Scan this from the Tailsend mobile app (Phase 2+), or copy the JSON.</p>
+        <p class="hint">In Tailsend Android, tap Pair and scan this QR. It carries this computer and as many peers as fit. For the rest, Refresh from hostname while this window is open.</p>
         <img v-if="qr" class="qr" :src="qr" alt="Pairing QR" />
-        <pre class="json">{{ pairJson }}</pre>
-        <button class="ghost" @click="copyJson">Copy JSON</button>
+        <details class="json-dbg">
+          <summary>Debug: JSON</summary>
+          <pre class="json">{{ pairJson }}</pre>
+          <button class="ghost" @click="copyJson">Copy JSON</button>
+        </details>
       </div>
     </div>
   </div>
@@ -195,14 +198,6 @@ const recvDirLabel = computed(() => {
   return parts[parts.length - 1] || recvDir.value;
 });
 
-function osColor(os) {
-  const s = (os || "").toLowerCase();
-  if (s.includes("mac") || s === "ios" || s === "darwin") return "#6b7280";
-  if (s.includes("win")) return "#3b82f6";
-  if (s.includes("android")) return "#22c55e";
-  if (s.includes("linux")) return "#f59e0b";
-  return "#5b8def";
-}
 function fmtSize(n) {
   if (n < 1024) return n + " B";
   const u = ["KiB", "MiB", "GiB"];
@@ -603,17 +598,18 @@ onUnmounted(() => {
   width: 40px;
   height: 40px;
   border-radius: 12px;
+  overflow: hidden;
   display: grid;
   place-items: center;
-  color: #fff;
 }
 .avatar :deep(.os-mark) {
-  width: 22px;
-  height: 22px;
+  width: 40px;
+  height: 40px;
   display: block;
 }
 .avatar.dim {
-  background: #3a4150;
+  filter: grayscale(1);
+  opacity: 0.55;
 }
 .name {
   font-weight: 600;
@@ -741,18 +737,28 @@ onUnmounted(() => {
   z-index: 20;
 }
 .sheet {
-  width: min(440px, 92vw);
+  width: min(520px, 92vw);
   border: 1px solid var(--line);
   border-radius: 16px;
   border-top: 1px solid var(--line);
 }
 .qr {
   display: block;
-  width: 220px;
-  height: 220px;
+  width: min(360px, 80vw);
+  height: auto;
+  aspect-ratio: 1;
   margin: 12px auto;
   background: #fff;
   border-radius: 8px;
+  image-rendering: pixelated;
+}
+.json-dbg {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.json-dbg summary {
+  cursor: pointer;
 }
 .json {
   font-size: 11px;

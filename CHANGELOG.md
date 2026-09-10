@@ -2,10 +2,31 @@
 
 ## Unreleased
 
+### Phase 2 — Android sender
+
+- `android/`: paste pairing JSON, pick files, PUT `{peerAPIURL}/v0/put/<file>`
+- Pairing JSON includes the pairing computer first (`ExportTargetsJSON`)
+- Android can scan the Pair phone QR (CameraX + ZXing); paste is debug-only
+- Pair → Refresh from hostname: PUT `tailsend-list-please` to that PC’s
+  PeerAPI; open GUI PushFile’s `tailsend-pair.json` (open-with on the phone).
+  First import and closed-GUI fallback remain Scan QR.
+- Pair QR is a compact minified snapshot (Low ECC, 1024px, ≤500 bytes) so
+  phone cameras can read it from a screen; overflow devices use hostname refresh.
+- OS device marks are PNG (`scripts/mkosicons.py`) on desktop and Android
+- Docs: LocalSend discovery is UDP multicast (not broadcast/mDNS); Android
+  has no netmap, so Pair QR is required for the first list. README /
+  `docs/desktop.md` / `android/README.md` cover Scan QR, hostname refresh,
+  compact QR, and `./scripts/build.sh`.
+
 ### Signing hooks
 
 - Optional Apple notarization (`CODESIGN_IDENTITY`, `NOTARY_PROFILE`) and
   Authenticode (`SIGN_THUMBPRINT`). See docs/signing.md.
+
+### Build cheat sheet
+
+- `./scripts/build.sh` / `scripts/build.ps1` / `make help`: CLI, native GUI,
+  Android APK, and the underlying commands.
 
 ### GUI release scripts
 

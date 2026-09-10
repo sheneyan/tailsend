@@ -2,8 +2,8 @@
 
 用 [LocalSend](https://localsend.org) 的用法，走 **Tailscale Taildrop** 传文件。
 
-当前是 CLI + 桌面 GUI（Android / iOS 在后续阶段）。它挂在本机已经在跑的官方
-Tailscale 上，**不会自己再创建一个 Tailscale 节点，也没有独立登录**。daemon
+当前是 CLI + 桌面 GUI，Android 发送端在 `android/`（iOS 仍在后续阶段）。**任何一端都不内嵌
+Tailscale，也没有独立登录**，只挂在本机已经在跑的官方客户端上。daemon
 没起来时，会提示你去打开 Tailscale 应用。
 
 ```bash
@@ -22,13 +22,19 @@ tailsend send ./photo.jpg pixel:
 |---|---|
 | macOS / Linux / Windows CLI | **Phase 0，可用** |
 | 桌面 GUI（Wails） | **Phase 1，可用** |
-| Android / iOS 发送端 | 计划中 |
+| Android 发送端 | **Phase 2，可用**（`android/`） |
+| iOS 发送端 | 计划中 |
 
 需要先安装并登录 [Tailscale](https://tailscale.com/download)。
+官方 iOS 应用未在**中国大陆、俄罗斯、白俄罗斯**的 App Store 上架；Tailsend
+不提供绕过安装的路径。见
+[docs/taildrop.md](docs/taildrop.md#official-tailscale-only)。
 
 ## 前提
 
-1. 要互传的设备都安装并登录 Tailscale。
+1. 要互传的设备都安装并登录**官方** Tailscale
+   （[下载页](https://tailscale.com/download)）。Tailsend 不内嵌节点，也不写
+   非官方客户端的安装办法。
 2. 在 [管理后台](https://login.tailscale.com/admin/settings/general) 打开
    **Send Files**。Taildrop 需要每个 tailnet 单独 opt-in。
 3. 默认只能在**同一用户、未打 tag** 的设备之间传。用 auth key 加入的节点通常
@@ -55,25 +61,24 @@ chmod +x tailsend-cli-darwin-arm64 && mv tailsend-cli-darwin-arm64 /usr/local/bi
 chmod +x tailsend-cli-linux-amd64 && sudo mv tailsend-cli-linux-amd64 /usr/local/bin/tailsend
 ```
 
-源码或 `go install`（需要 **Go 1.26+**，不要用 apt 的 `golang-go`）：
+源码或 `go install`（需要 **Go 1.26+**，不要用 apt 的 `golang-go`）。忘了指令时跑这一条：
 
 ```bash
-go install github.com/sheneyan/tailsend/cmd/tailsend@latest
-
 git clone https://github.com/sheneyan/tailsend.git
 cd tailsend
-make cli        # 当前这台机器
-make cli-all    # dist/ 下六个平台的 tailsend-cli-*
+./scripts/build.sh            # 打印各端命令
+./scripts/build.sh cli        # 本机 CLI → ./tailsend
+./scripts/build.sh cli-all    # dist/tailsend-cli-*（六个平台）
+./scripts/build.sh gui        # 本机 GUI 包（dmg / tar.gz / exe）
+./scripts/build.sh android    # Debug APK
+./scripts/build.sh android-install
 ```
 
-GUI 是另一份带 CGO 的程序，**不能**交叉编译，要在对应系统上打包：
+Windows：`powershell -ExecutionPolicy Bypass -File .\scripts\build.ps1`
 
-```bash
-cd desktop
-make dmg           # macOS：Tailsend.app + dist-release/Tailsend.dmg
-sh ./pack-linux.sh
-# Windows: powershell -ExecutionPolicy Bypass -File .\pack-windows.ps1
-```
+CLI 仍可用 `go install github.com/sheneyan/tailsend/cmd/tailsend@latest`。
+GUI 带 CGO，**不能**交叉编译；`build.sh gui` 会在当前系统跑 `make dmg` /
+`pack-linux.sh` / `pack-windows.ps1`。
 
 见 [docs/desktop.md](docs/desktop.md) 的 **Release packages**。公证 / Authenticode：
 [docs/signing.md](docs/signing.md)。
@@ -100,8 +105,25 @@ go build -tags production -o Tailsend .          # Windows 用 Tailsend.exe
 
 窗口里是设备名网格。先加文件（点击或拖进窗口），再点设备。发完后会提示对端
 文件大概在哪（Windows 下载目录 / Linux 的 `tailsend recv .`）。**Inbox** 取
-daemon 收件箱。GUI 的 **Pair phone** 和命令行 `tailsend pair [--qr]` 是同一份
-配对 JSON（给后续手机 App）。
+daemon 收件箱。GUI 的 **Pair phone** 是给手机扫的**精简 QR**（本机在前，能塞下的
+设备为止）。带缩进的 JSON 在 Debug 里。`git pull` 后请重编 GUI
+（`./scripts/build.sh gui`），否则会扫到旧的过密二维码。
+
+### Android 发送端
+
+手机上官方 Tailscale VPN 必须已连接。接收仍在官方应用里。
+
+```bash
+./scripts/build.sh android
+./scripts/build.sh android-install      # 真机已 adb 连接
+```
+
+1. 电脑：Tailsend → **Pair phone**。手机：**Pair → Scan QR**。
+2. 之后可 **Refresh from hostname**（MagicDNS 短名），该电脑的 Tailsend 窗口
+   要开着；用 Tailsend 打开官方 Tailscale 收到的 `tailsend-pair.json`。
+3. 选文件，点设备。
+
+详见 [android/README.md](android/README.md)。
 
 双击 GUI 若弹出控制台、图标是默认 Go 图标：见
 [docs/desktop.md](docs/desktop.md) 的 Packaging。macOS 用 `cd desktop && make app`。
@@ -145,10 +167,10 @@ Linux 上 `tailscaled` 常以 root 运行，收件箱文件也归 root，可能�
 
 | | LocalSend | Tailsend |
 |---|---|---|
-| 网络 | 局域网 mDNS | 你的 tailnet（WireGuard / DERP） |
+| 网络 | 局域网 | 你的 tailnet（WireGuard / DERP） |
 | 账号 | 无 | 复用 Tailscale |
 | 跨互联网 | 否 | 只要 Tailscale 能打到对端 |
-| 发现设备 | 附近设备 | `tailsend list` 读 netmap |
+| 发现设备 | UDP 组播 `224.0.0.167:53317`（不是广播；组播被挡时再扫网段） | 桌面：LocalAPI netmap。Android：扫 Pair QR，之后可用主机名经 Taildrop 刷新列表 |
 | 文件夹 | 原生目录树 | 先 zip 再发 |
 | 接收确认 | 应用内 | 跟官方 Taildrop 一样 |
 
@@ -164,6 +186,7 @@ Linux 上 `tailscaled` 常以 root 运行，收件箱文件也归 root，可能�
 | 列表里没有，或 not a Taildrop target | 打了 tag、离线、或没有 PeerAPI |
 | `destination must end with ':'` | 写成 `pixel:` 而不是 `pixel` |
 | Linux `recv` 权限不够 | 用和 `tailscaled` 相同的用户（经常是 sudo） |
+| Pair QR 太密，微信/系统相机扫不出 | 旧 GUI 把整份 JSON 编进码里。重编 GUI：`./scripts/build.sh gui` |
 | GUI：`Package webkit2gtk-4.0 was not found` | Ubuntu 24 用 `-tags production,webkit2_41`，见 [docs/desktop.md](docs/desktop.md) |
 | `invalid go version … must match format 1.23` | 还在用 apt 的 Go；装 https://go.dev/dl，保证 `which go` 是 `/usr/local/go/bin/go` |
 | `Unable to locate package libwebkit2gtk-4.1-dev~` | 包名不要带 `~` |
@@ -173,11 +196,13 @@ Linux 上 `tailscaled` 常以 root 运行，收件箱文件也归 root，可能�
 ## 开发
 
 ```bash
-go test ./...
+./scripts/build.sh            # 各端命令
+./scripts/build.sh test
 go build -o tailsend ./cmd/tailsend
 ```
 
-单测用假 LocalAPI，不需要真 tailnet。贡献说明见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+单测用假 LocalAPI，不需要真 tailnet。Android 发送端在 `android/`，见
+[android/README.md](android/README.md)。贡献说明见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 许可
 
