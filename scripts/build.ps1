@@ -13,22 +13,22 @@ Set-Location $Root
 
 function Show-Help {
     @"
-Tailsend 编译（Windows）
+Tailsend build (Windows)
 
-  .\scripts\build.ps1                 打印本说明
-  .\scripts\build.ps1 cli             本机 CLI → .\tailsend.exe
-  .\scripts\build.ps1 cli-all         六平台 CLI → dist\tailsend-cli-*
-  .\scripts\build.ps1 gui             Tailsend.exe（无控制台窗口）
-  .\scripts\build.ps1 test            Go 单测（含 desktop）
+  .\scripts\build.ps1                 print this help
+  .\scripts\build.ps1 cli             CLI for this machine -> .\tailsend.exe
+  .\scripts\build.ps1 cli-all         CLI for six OS/arch -> dist\tailsend-cli-*
+  .\scripts\build.ps1 gui             Tailsend.exe (no extra console window)
+  .\scripts\build.ps1 test            Go tests (including desktop)
   .\scripts\build.ps1 all             cli-all + gui
 
-底层命令
+Underlying commands
   CLI   go build -o tailsend.exe .\cmd\tailsend
-        或仓库里的 Git Bash / make cli-all
+        or Git Bash / make cli-all
   GUI   cd desktop; powershell -ExecutionPolicy Bypass -File .\pack-windows.ps1
-  测试  go test ./... ; go test ./desktop
+  test  go test ./... ; go test ./desktop
 
-必须 -tags production。不要用旧的 apt/msys Go。代理:
+Always use -tags production. Do not use old apt/msys Go. Proxy:
   go env -w GOPROXY=https://goproxy.cn,direct
 "@
 }
