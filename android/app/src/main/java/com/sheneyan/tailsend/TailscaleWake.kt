@@ -56,13 +56,32 @@ class TailscalePromptController(
         private set
     var declined: Boolean = false
         private set
+    private var skipNextProcessStop: Boolean = false
 
     fun onForeground() {
-        phase = decideTailscalePrompt(wake.ips(), wake.installed(), declined, phase)
+        val ips = try {
+            wake.ips()
+        } catch (_: Exception) {
+            emptyList()
+        }
+        val installed = try {
+            wake.installed()
+        } catch (_: Exception) {
+            false
+        }
+        phase = decideTailscalePrompt(ips, installed, declined, phase)
     }
 
     fun onProcessBackground() {
+        if (skipNextProcessStop) {
+            skipNextProcessStop = false
+            return
+        }
         declined = false
+    }
+
+    fun ignoreNextProcessStop() {
+        skipNextProcessStop = true
     }
 
     fun decline() {
@@ -81,11 +100,15 @@ class TailscalePromptController(
         }
         phase = TailscalePrompt.Starting
         try {
-            wake.sendConnect()
+            try {
+                wake.sendConnect()
+            } catch (_: Exception) {
+            }
+            val ok = waitForTailscaleIPs(wake.ips, waitAttempts, waitMs, sleep)
+            phase = if (ok) TailscalePrompt.None else TailscalePrompt.Failed
         } catch (_: Exception) {
+            phase = TailscalePrompt.Failed
         }
-        val ok = waitForTailscaleIPs(wake.ips, waitAttempts, waitMs, sleep)
-        phase = if (ok) TailscalePrompt.None else TailscalePrompt.Failed
     }
 
     fun openApp(): Boolean = try {

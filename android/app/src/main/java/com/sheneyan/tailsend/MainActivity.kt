@@ -40,7 +40,10 @@ class MainActivity : ComponentActivity() {
             TailsendTheme {
                 TailsendScreen(
                     state = state,
-                    onPickFiles = { pickFiles.launch("*/*") },
+                    onPickFiles = {
+                        vm.ignoreNextProcessStop()
+                        pickFiles.launch("*/*")
+                    },
                     onSendTo = vm::sendTo,
                     onOpenPair = vm::openPair,
                     onClosePair = vm::closePair,

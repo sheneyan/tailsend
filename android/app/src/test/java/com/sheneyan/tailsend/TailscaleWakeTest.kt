@@ -154,6 +154,29 @@ class TailscaleWakeTest {
     }
 
     @Test
+    fun ignoreNextProcessStopKeepsDecline() {
+        val c = TailscalePromptController(fakeWake())
+        c.onForeground()
+        c.decline()
+        c.ignoreNextProcessStop()
+        c.onProcessBackground()
+        c.onForeground()
+        assertEquals(TailscalePrompt.None, c.phase)
+    }
+
+    @Test
+    fun secondProcessStopAfterIgnoreClearsDecline() {
+        val c = TailscalePromptController(fakeWake())
+        c.onForeground()
+        c.decline()
+        c.ignoreNextProcessStop()
+        c.onProcessBackground()
+        c.onProcessBackground()
+        c.onForeground()
+        assertEquals(TailscalePrompt.Confirm, c.phase)
+    }
+
+    @Test
     fun startDoesNotBroadcastWhenMissing() {
         var sent = 0
         val c = TailscalePromptController(
@@ -205,6 +228,15 @@ class TailscaleWakeTest {
             ),
         )
         c.start(waitAttempts = 2, waitMs = 1, sleep = {})
+        assertEquals(TailscalePrompt.Failed, c.phase)
+    }
+
+    @Test
+    fun startTreatsIpsExceptionAsFailed() {
+        val c = TailscalePromptController(
+            fakeWake(ips = { error("nic") }),
+        )
+        c.start(waitAttempts = 1, sleep = {})
         assertEquals(TailscalePrompt.Failed, c.phase)
     }
 

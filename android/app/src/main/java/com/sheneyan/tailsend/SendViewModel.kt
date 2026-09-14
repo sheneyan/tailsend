@@ -240,12 +240,20 @@ class SendViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun onForeground() {
-        tailscale.onForeground()
+        try {
+            tailscale.onForeground()
+        } catch (_: Exception) {
+            // controller should already catch; if not, do not crash resume
+        }
         publishPrompt()
     }
 
     fun onProcessBackground() {
         tailscale.onProcessBackground()
+    }
+
+    fun ignoreNextProcessStop() {
+        tailscale.ignoreNextProcessStop()
     }
 
     fun declineTailscale() {
@@ -256,8 +264,11 @@ class SendViewModel(app: Application) : AndroidViewModel(app) {
     fun startTailscale() {
         viewModelScope.launch {
             _state.update { it.copy(tailscalePrompt = TailscalePrompt.Starting) }
-            withContext(Dispatchers.IO) { tailscale.start() }
-            publishPrompt()
+            try {
+                withContext(Dispatchers.IO) { tailscale.start() }
+            } finally {
+                publishPrompt()
+            }
         }
     }
 
