@@ -40,7 +40,10 @@ class MainActivity : ComponentActivity() {
             TailsendTheme {
                 TailsendScreen(
                     state = state,
-                    onPickFiles = { pickFiles.launch("*/*") },
+                    onPickFiles = {
+                        vm.ignoreNextProcessStop()
+                        pickFiles.launch("*/*")
+                    },
                     onSendTo = vm::sendTo,
                     onOpenPair = vm::openPair,
                     onClosePair = vm::closePair,
@@ -51,10 +54,18 @@ class MainActivity : ComponentActivity() {
                     onScan = ::startScan,
                     onScanResult = vm::importRaw,
                     onCloseScan = vm::closeScan,
+                    onStartTailscale = vm::startTailscale,
+                    onDeclineTailscale = vm::declineTailscale,
+                    onOpenTailscale = vm::openTailscale,
                 )
             }
         }
         handleIncomingIntent(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        vm.onForeground()
     }
 
     override fun onNewIntent(intent: Intent) {

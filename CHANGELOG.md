@@ -8,6 +8,9 @@
 - Pairing JSON includes the pairing computer first (`ExportTargetsJSON`)
 - Android can scan the Pair phone QR (CameraX + ZXing); paste is debug-only
 - Android appears in the system share sheet (`SEND` / `SEND_MULTIPLE`, `*/*`)
+- On foreground, if there is no Tailscale address, ask to Start official
+  Tailscale via `CONNECT_VPN` (stay in Tailsend). Open Tailscale UI is
+  the fallback.
 - Pair → Refresh from hostname: PUT `tailsend-list-please` to that PC’s
   PeerAPI; open GUI PushFile’s `tailsend-pair.json` (open-with on the phone).
   First import and closed-GUI fallback remain Scan QR.
