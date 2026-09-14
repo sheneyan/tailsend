@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.sheneyan.tailsend.SendUiState
+import com.sheneyan.tailsend.TailscalePrompt
 import com.sheneyan.tailsend.Target
 import com.sheneyan.tailsend.osDrawable
 
@@ -78,6 +79,9 @@ fun TailsendScreen(
     onScan: () -> Unit,
     onScanResult: (String) -> Unit,
     onCloseScan: () -> Unit,
+    onStartTailscale: () -> Unit,
+    onDeclineTailscale: () -> Unit,
+    onOpenTailscale: () -> Unit,
 ) {
     Surface(color = Bg, modifier = Modifier.fillMaxSize()) {
         Column(
@@ -98,6 +102,51 @@ fun TailsendScreen(
                 fontSize = 13.sp,
                 modifier = Modifier.padding(top = 6.dp, bottom = 16.dp),
             )
+
+            if (state.tailscalePrompt != TailscalePrompt.None) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Card,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(
+                            when (state.tailscalePrompt) {
+                                TailscalePrompt.Confirm -> "Tailscale is not connected. Start it?"
+                                TailscalePrompt.Starting -> "Starting Tailscale…"
+                                TailscalePrompt.Failed ->
+                                    "Could not start Tailscale. It may need login, VPN permission, or another VPN is active."
+                                TailscalePrompt.Missing ->
+                                    "Install official Tailscale and sign in. Tailsend does not embed a node."
+                                TailscalePrompt.None -> ""
+                            },
+                            color = Color.White,
+                            fontSize = 14.sp,
+                        )
+                        Row(
+                            modifier = Modifier.padding(top = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            when (state.tailscalePrompt) {
+                                TailscalePrompt.Confirm -> {
+                                    Button(onClick = onStartTailscale) { Text("Start") }
+                                    TextButton(onClick = onDeclineTailscale) { Text("Not now") }
+                                }
+                                TailscalePrompt.Failed -> {
+                                    Button(onClick = onOpenTailscale) { Text("Open Tailscale") }
+                                    TextButton(onClick = onDeclineTailscale) { Text("Not now") }
+                                }
+                                TailscalePrompt.Missing -> {
+                                    TextButton(onClick = onDeclineTailscale) { Text("Not now") }
+                                }
+                                else -> {}
+                            }
+                        }
+                    }
+                }
+            }
 
             Box(
                 modifier = Modifier

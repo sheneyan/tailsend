@@ -51,10 +51,18 @@ class MainActivity : ComponentActivity() {
                     onScan = ::startScan,
                     onScanResult = vm::importRaw,
                     onCloseScan = vm::closeScan,
+                    onStartTailscale = vm::startTailscale,
+                    onDeclineTailscale = vm::declineTailscale,
+                    onOpenTailscale = vm::openTailscale,
                 )
             }
         }
         handleIncomingIntent(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        vm.onForeground()
     }
 
     override fun onNewIntent(intent: Intent) {
