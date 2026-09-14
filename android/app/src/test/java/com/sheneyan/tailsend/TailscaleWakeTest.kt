@@ -96,4 +96,33 @@ class TailscaleWakeTest {
             ),
         )
     }
+
+    @Test
+    fun waitReturnsTrueWhenIpsAppear() {
+        var n = 0
+        val ok = waitForTailscaleIPs(
+            ips = {
+                n++
+                if (n >= 3) listOf("100.64.0.1") else emptyList()
+            },
+            attempts = 16,
+            delayMs = 500,
+            sleep = {},
+        )
+        assertTrue(ok)
+        assertEquals(3, n)
+    }
+
+    @Test
+    fun waitReturnsFalseWhenIpsStayEmpty() {
+        var sleeps = 0
+        val ok = waitForTailscaleIPs(
+            ips = { emptyList() },
+            attempts = 16,
+            delayMs = 500,
+            sleep = { sleeps++ },
+        )
+        assertFalse(ok)
+        assertEquals(16, sleeps)
+    }
 }
