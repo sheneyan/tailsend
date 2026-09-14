@@ -1,5 +1,9 @@
 package com.sheneyan.tailsend
 
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+
 enum class TailscalePrompt {
     None,
     Confirm,
@@ -89,4 +93,42 @@ class TailscalePromptController(
     } catch (_: Exception) {
         false
     }
+
+    fun markMissing() {
+        phase = TailscalePrompt.Missing
+    }
+}
+
+const val TAILSCALE_PACKAGE = "com.tailscale.ipn"
+const val TAILSCALE_RECEIVER = "com.tailscale.ipn.IPNReceiver"
+const val INTENT_CONNECT_VPN = "com.tailscale.ipn.CONNECT_VPN"
+
+fun tailscaleWake(context: Context): TailscaleWake {
+    val app = context.applicationContext
+    return TailscaleWake(
+        ips = { tailscaleIPs() },
+        installed = {
+            try {
+                @Suppress("DEPRECATION")
+                app.packageManager.getPackageInfo(TAILSCALE_PACKAGE, 0)
+                true
+            } catch (_: PackageManager.NameNotFoundException) {
+                false
+            }
+        },
+        sendConnect = {
+            val i = Intent(INTENT_CONNECT_VPN).setClassName(TAILSCALE_PACKAGE, TAILSCALE_RECEIVER)
+            app.sendBroadcast(i)
+        },
+        openApp = {
+            val i = app.packageManager.getLaunchIntentForPackage(TAILSCALE_PACKAGE)
+            if (i == null) {
+                false
+            } else {
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                app.startActivity(i)
+                true
+            }
+        },
+    )
 }

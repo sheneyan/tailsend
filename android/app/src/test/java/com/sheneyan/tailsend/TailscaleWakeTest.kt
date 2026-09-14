@@ -207,4 +207,11 @@ class TailscaleWakeTest {
         c.start(waitAttempts = 2, waitMs = 1, sleep = {})
         assertEquals(TailscalePrompt.Failed, c.phase)
     }
+
+    @Test
+    fun markMissingSetsPhase() {
+        val c = TailscalePromptController(fakeWake())
+        c.markMissing()
+        assertEquals(TailscalePrompt.Missing, c.phase)
+    }
 }

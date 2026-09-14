@@ -4,6 +4,9 @@ import android.app.Application
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,12 +35,29 @@ data class SendUiState(
     val progressTotal: Long = 0,
     val note: String = "",
     val error: String = "",
+    val tailscalePrompt: TailscalePrompt = TailscalePrompt.None,
 )
 
 class SendViewModel(app: Application) : AndroidViewModel(app) {
     private val store = PairStore(app)
     private val _state = MutableStateFlow(SendUiState())
     val state: StateFlow<SendUiState> = _state
+    private val wake = tailscaleWake(app)
+    private val tailscale = TailscalePromptController(wake)
+    private val processObserver = object : DefaultLifecycleObserver {
+        override fun onStop(owner: LifecycleOwner) {
+            onProcessBackground()
+        }
+    }
+
+    init {
+        ProcessLifecycleOwner.get().lifecycle.addObserver(processObserver)
+    }
+
+    override fun onCleared() {
+        ProcessLifecycleOwner.get().lifecycle.removeObserver(processObserver)
+        super.onCleared()
+    }
 
     init {
         val targets = store.load()
@@ -217,5 +237,41 @@ class SendViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
         }
+    }
+
+    fun onForeground() {
+        tailscale.onForeground()
+        publishPrompt()
+    }
+
+    fun onProcessBackground() {
+        tailscale.onProcessBackground()
+    }
+
+    fun declineTailscale() {
+        tailscale.decline()
+        publishPrompt()
+    }
+
+    fun startTailscale() {
+        viewModelScope.launch {
+            _state.update { it.copy(tailscalePrompt = TailscalePrompt.Starting) }
+            withContext(Dispatchers.IO) { tailscale.start() }
+            publishPrompt()
+        }
+    }
+
+    fun openTailscale() {
+        viewModelScope.launch {
+            val ok = withContext(Dispatchers.IO) { tailscale.openApp() }
+            if (!ok) {
+                tailscale.markMissing()
+            }
+            publishPrompt()
+        }
+    }
+
+    private fun publishPrompt() {
+        _state.update { it.copy(tailscalePrompt = tailscale.phase) }
     }
 }
