@@ -19,8 +19,9 @@
 - OS device marks are PNG (`scripts/mkosicons.py`) on desktop and Android
 - Docs: LocalSend discovery is UDP multicast (not broadcast/mDNS); Android
   has no netmap, so Pair QR is required for the first list. README /
-  `docs/desktop.md` / `android/README.md` cover Scan QR, hostname refresh,
-  compact QR, and `./scripts/build.sh`.
+  `docs/architecture.md` / `android/README.md` cover Scan QR, hostname
+  refresh, compact QR, share sheet, Start via `CONNECT_VPN`, and
+  `./scripts/build.sh`.
 
 ### Signing hooks
 

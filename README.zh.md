@@ -4,7 +4,8 @@
 
 当前是 CLI + 桌面 GUI，Android 发送端在 `android/`（iOS 仍在后续阶段）。**任何一端都不内嵌
 Tailscale，也没有独立登录**，只挂在本机已经在跑的官方客户端上。daemon
-没起来时，会提示你去打开 Tailscale 应用。
+没起来时，会提示你去打开 Tailscale 应用。Android 上可以问一句是否
+**Start**，用官方 `CONNECT_VPN` 在后台把 VPN 拉起来，不必先切走。
 
 ```bash
 tailsend list
@@ -111,7 +112,9 @@ daemon 收件箱。GUI 的 **Pair phone** 是给手机扫的**精简 QR**（本�
 
 ### Android 发送端
 
-手机上官方 Tailscale VPN 必须已连接。接收仍在官方应用里。
+手机上官方 Tailscale VPN 必须已连接。接收仍在官方应用里。VPN
+没通时，Tailsend 会问 **Start it?**；点 **Start** 在后台唤起官方 Tailscale。
+第一次登录和 VPN 授权仍在官方应用里完成。
 
 ```bash
 ./scripts/build.sh android

@@ -4,11 +4,11 @@ Sender only. The app does **not** embed Tailscale. Official Tailscale VPN
 must be connected; receive stays in that app.
 
 On open (including share-sheet entry), if this phone has no Tailscale
-address (`100.64/10` or `fd7a:115c:a1e0::/48`), Tailsend asks to start
-official Tailscale and sends `com.tailscale.ipn.CONNECT_VPN`. That does
-not open the Tailscale UI. First-time login and the VPN permission
-dialog still happen in the official app. Another VPN occupying Android’s
-slot looks like a failed start; use **Open Tailscale**.
+address (`100.64/10` or `fd7a:115c:a1e0::/48`), Tailsend asks **Start it?**
+**Start** sends `com.tailscale.ipn.CONNECT_VPN` and stays in Tailsend
+(it does not open the Tailscale UI). First-time login and the VPN
+permission dialog still happen in the official app. Another VPN occupying
+Android’s slot looks like a failed start; use **Open Tailscale**.
 
 The phone cannot read Tailscale’s netmap (that lives in the official app).
 VPN + MagicDNS can resolve a hostname to `100.x`; they do not list devices

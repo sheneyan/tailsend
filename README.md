@@ -5,7 +5,9 @@ LocalSend-style file transfer over **Tailscale Taildrop**.
 Tailsend is a CLI and desktop GUI that talks to the official Tailscale daemon
 already running on your machine. An Android sender lives in `android/` (iOS
 later). No surface embeds Tailscale or has a login of its own. If Tailscale
-is not running, Tailsend tells you to open the Tailscale app.
+is not running, Tailsend tells you to open the Tailscale app. On Android
+it can ask to **Start** the official VPN (`CONNECT_VPN`) without leaving
+Tailsend.
 
 ```bash
 tailsend list
@@ -122,6 +124,9 @@ the GUI (`./scripts/build.sh gui`) or cameras cannot read an old dense QR.
 ### Android sender
 
 Official Tailscale VPN must be connected. Receive stays in that app.
+If the VPN is down, Tailsend asks **Start it?**; **Start** wakes official
+Tailscale in the background. First-time login / VPN permission still
+happen in that app.
 
 ```bash
 ./scripts/build.sh android              # debug APK
@@ -231,7 +236,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/architecture.md](docs/architect
 
 1. **Phase 0 (done)** — Go library + CLI
 2. **Phase 1 (done)** — Desktop GUI (Wails) with a named-device grid
-3. **Phase 2 (usable sender)** — Android (`android/`): Scan QR, hostname refresh, PeerAPI PUT
+3. **Phase 2 (usable sender)** — Android (`android/`): Scan QR, hostname refresh, share sheet, Start Tailscale, PeerAPI PUT
 4. **Phase 3** — iOS sender
 5. **Phase 4** — Share-sheet polish, resume UX
 

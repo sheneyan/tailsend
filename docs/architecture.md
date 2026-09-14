@@ -113,9 +113,12 @@ may flash as a received file before it is deleted.
 Desktop GUI is Phase 1 (`desktop/`). Pairing payload is `tailsend pair` /
 `list --json` / the GUI **Pair phone** button.
 
-- **Android** (`android/`): cannot call LocalAPI. Send with HTTP PUT to
-  `{peerAPIURL}/v0/put/<file>` while the system Tailscale VPN is up. Pair by
-  scanning the Pair phone QR, or refresh the list from a hostname whose
-  Tailsend GUI is open. Receive stays in the official Tailscale app.
+- **Android** (`android/`): cannot call LocalAPI. On foreground, if there is
+  no Tailscale address, Tailsend may ask to **Start** official Tailscale
+  (`com.tailscale.ipn.CONNECT_VPN`) and stay in Tailsend; first login and
+  the VPN permission still happen in that app. Send with HTTP PUT to
+  `{peerAPIURL}/v0/put/<file>` while the VPN is up. Pair by scanning the
+  Pair phone QR, or refresh the list from a hostname whose Tailsend GUI is
+  open. Receive stays in the official Tailscale app.
 - **iOS:** same send model, not started.
 - Receive-side progress, tailcat, signed installers: [TODO.md](../TODO.md).
