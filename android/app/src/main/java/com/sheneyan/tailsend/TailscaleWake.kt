@@ -37,3 +37,56 @@ fun waitForTailscaleIPs(
     }
     return ips().isNotEmpty()
 }
+
+data class TailscaleWake(
+    val ips: () -> List<String>,
+    val installed: () -> Boolean,
+    val sendConnect: () -> Unit,
+    val openApp: () -> Boolean,
+)
+
+class TailscalePromptController(
+    private val wake: TailscaleWake,
+) {
+    var phase: TailscalePrompt = TailscalePrompt.None
+        private set
+    var declined: Boolean = false
+        private set
+
+    fun onForeground() {
+        phase = decideTailscalePrompt(wake.ips(), wake.installed(), declined, phase)
+    }
+
+    fun onProcessBackground() {
+        declined = false
+    }
+
+    fun decline() {
+        declined = true
+        phase = TailscalePrompt.None
+    }
+
+    fun start(
+        waitAttempts: Int = TAILSCALE_WAIT_ATTEMPTS,
+        waitMs: Long = TAILSCALE_WAIT_MS,
+        sleep: (Long) -> Unit = { Thread.sleep(it) },
+    ) {
+        if (!wake.installed()) {
+            phase = TailscalePrompt.Missing
+            return
+        }
+        phase = TailscalePrompt.Starting
+        try {
+            wake.sendConnect()
+        } catch (_: Exception) {
+        }
+        val ok = waitForTailscaleIPs(wake.ips, waitAttempts, waitMs, sleep)
+        phase = if (ok) TailscalePrompt.None else TailscalePrompt.Failed
+    }
+
+    fun openApp(): Boolean = try {
+        wake.openApp()
+    } catch (_: Exception) {
+        false
+    }
+}
