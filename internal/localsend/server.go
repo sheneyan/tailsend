@@ -54,6 +54,7 @@ type Server struct {
 	OnPeer     func(ip string, info Info)
 	OnSaved    func(alias string, count int)
 	AcceptWait time.Duration
+	IdleWait   time.Duration
 
 	mu       sync.Mutex
 	session  *recvSession
@@ -61,18 +62,66 @@ type Server struct {
 }
 
 type recvSession struct {
-	id     string
-	alias  string
-	tokens map[string]string
-	metas  map[string]FileMeta
-	paths  map[string]string
-	got    int
+	id      string
+	alias   string
+	tokens  map[string]string
+	metas   map[string]FileMeta
+	paths   map[string]string
+	busy    map[string]bool
+	got     int
+	idle    *time.Timer
+	idleGen int
 }
 
 func (s *Server) clearSession() {
 	s.mu.Lock()
+	s.dropSessionLocked(s.session)
 	s.session = nil
 	s.mu.Unlock()
+}
+
+func (s *Server) idleDuration() time.Duration {
+	if s.IdleWait > 0 {
+		return s.IdleWait
+	}
+	return 2 * time.Minute
+}
+
+// dropSessionLocked invalidates an idle timer. Caller holds s.mu.
+func (s *Server) dropSessionLocked(sess *recvSession) {
+	if sess == nil {
+		return
+	}
+	sess.idleGen++
+	if sess.idle != nil {
+		sess.idle.Stop()
+		sess.idle = nil
+	}
+}
+
+// armIdleLocked starts or resets the abandoned-session timer. Caller holds s.mu.
+func (s *Server) armIdleLocked(sess *recvSession) {
+	s.dropSessionLocked(sess)
+	gen := sess.idleGen
+	sess.idle = time.AfterFunc(s.idleDuration(), func() {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		if s.session != sess || sess.idleGen != gen {
+			return
+		}
+		for _, p := range sess.paths {
+			os.Remove(p)
+		}
+		s.session = nil
+	})
+}
+
+func (s *Server) clearBusy(sess *recvSession, fileID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.session == sess {
+		delete(sess.busy, fileID)
+	}
 }
 
 func (s *Server) Handler() http.Handler {
@@ -100,7 +149,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var info Info
-	if err := json.NewDecoder(r.Body).Decode(&info); err != nil {
+	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(&info); err != nil {
 		http.Error(w, "bad json", http.StatusBadRequest)
 		return
 	}
@@ -124,6 +173,12 @@ func (s *Server) handlePrepare(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad body", http.StatusBadRequest)
 		return
 	}
+	for _, meta := range req.Files {
+		if meta.Size < 0 {
+			http.Error(w, "bad size", http.StatusBadRequest)
+			return
+		}
+	}
 	s.mu.Lock()
 	if s.session != nil {
 		s.mu.Unlock()
@@ -136,6 +191,7 @@ func (s *Server) handlePrepare(w http.ResponseWriter, r *http.Request) {
 		tokens: map[string]string{},
 		metas:  map[string]FileMeta{},
 		paths:  map[string]string{},
+		busy:   map[string]bool{},
 	}
 	s.session = sess
 	s.mu.Unlock()
@@ -160,19 +216,25 @@ func (s *Server) handlePrepare(w http.ResponseWriter, r *http.Request) {
 		cancel()
 		accept = ok
 	}
-	if !accept {
+	if !accept || r.Context().Err() != nil {
 		s.clearSession()
 		http.Error(w, "rejected", http.StatusForbidden)
 		return
 	}
 	resp := PrepareResponse{SessionID: sess.id, Files: map[string]string{}}
 	s.mu.Lock()
+	if s.session != sess {
+		s.mu.Unlock()
+		http.Error(w, "rejected", http.StatusForbidden)
+		return
+	}
 	for _, meta := range files {
 		tok := randomID()
 		sess.tokens[meta.ID] = tok
 		sess.metas[meta.ID] = meta
 		resp.Files[meta.ID] = tok
 	}
+	s.armIdleLocked(sess)
 	s.mu.Unlock()
 	writeJSON(w, http.StatusOK, resp)
 }
@@ -196,55 +258,85 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "token", http.StatusForbidden)
 		return
 	}
-	meta := sess.metas[fileID]
-	s.mu.Unlock()
-
-	dest, err := destPath(s.SaveDir, meta.FileName)
-	if err != nil {
-		s.failUpload(w)
+	if sess.busy[fileID] || sess.paths[fileID] != "" {
+		s.mu.Unlock()
+		http.Error(w, "duplicate", http.StatusConflict)
 		return
 	}
-	f, err := os.OpenFile(dest, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
+	sess.busy[fileID] = true
+	meta := sess.metas[fileID]
+	s.armIdleLocked(sess)
+	s.mu.Unlock()
+
+	f, dest, err := createDest(s.SaveDir, meta.FileName)
 	if err != nil {
+		s.clearBusy(sess, fileID)
 		s.failUpload(w)
 		return
 	}
 	h := sha256.New()
-	_, copyErr := io.Copy(io.MultiWriter(f, h), r.Body)
+	n, copyErr := io.Copy(io.MultiWriter(f, h), io.LimitReader(r.Body, meta.Size))
 	closeErr := f.Close()
 	if copyErr != nil || closeErr != nil {
 		os.Remove(dest)
+		s.clearBusy(sess, fileID)
 		s.failUpload(w)
 		return
 	}
-	if meta.SHA256 != "" && !strings.EqualFold(meta.SHA256, hex.EncodeToString(h.Sum(nil))) {
+	extra := make([]byte, 1)
+	m, readErr := r.Body.Read(extra)
+	if readErr != nil && readErr != io.EOF && m == 0 {
+		os.Remove(dest)
+		s.clearBusy(sess, fileID)
+		s.failUpload(w)
+		return
+	}
+	sum := hex.EncodeToString(h.Sum(nil))
+	s.mu.Lock()
+	if s.session != sess {
+		s.mu.Unlock()
+		os.Remove(dest)
+		http.Error(w, "canceled", http.StatusForbidden)
+		return
+	}
+	if n != meta.Size || m > 0 {
+		delete(sess.busy, fileID)
+		s.mu.Unlock()
+		os.Remove(dest)
+		http.Error(w, "size", http.StatusBadRequest)
+		return
+	}
+	if meta.SHA256 != "" && !strings.EqualFold(meta.SHA256, sum) {
+		delete(sess.busy, fileID)
+		s.mu.Unlock()
 		os.Remove(dest)
 		http.Error(w, "checksum", http.StatusUnprocessableEntity)
 		return
 	}
-	s.mu.Lock()
-	if s.session == sess {
+	delete(sess.busy, fileID)
+	if sess.paths[fileID] == "" {
 		sess.paths[fileID] = dest
 		sess.got++
-		done := sess.got == len(sess.metas)
-		alias, n := sess.alias, sess.got
-		if done {
-			if s.finished == nil {
-				s.finished = map[string][]string{}
-			}
-			paths := make([]string, 0, len(sess.paths))
-			for _, p := range sess.paths {
-				paths = append(paths, p)
-			}
-			s.finished[sess.id] = paths
-			s.session = nil
+	}
+	done := sess.got == len(sess.metas)
+	alias, count := sess.alias, sess.got
+	if done {
+		if s.finished == nil {
+			s.finished = map[string][]string{}
 		}
-		s.mu.Unlock()
-		if done && s.OnSaved != nil {
-			s.OnSaved(alias, n)
+		paths := make([]string, 0, len(sess.paths))
+		for _, p := range sess.paths {
+			paths = append(paths, p)
 		}
+		s.finished[sess.id] = paths
+		s.dropSessionLocked(sess)
+		s.session = nil
 	} else {
-		s.mu.Unlock()
+		s.armIdleLocked(sess)
+	}
+	s.mu.Unlock()
+	if done && s.OnSaved != nil {
+		s.OnSaved(alias, count)
 	}
 	w.WriteHeader(http.StatusOK)
 }
@@ -265,6 +357,7 @@ func (s *Server) handleCancel(w http.ResponseWriter, r *http.Request) {
 		for _, p := range sess.paths {
 			os.Remove(p)
 		}
+		s.dropSessionLocked(sess)
 		s.session = nil
 	}
 	for _, p := range s.finished[id] {
@@ -275,9 +368,9 @@ func (s *Server) handleCancel(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func destPath(dir, fileName string) (string, error) {
+func createDest(dir, fileName string) (*os.File, string, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return "", err
+		return nil, "", err
 	}
 	base := SafeBase(fileName)
 	ext := filepath.Ext(base)
@@ -288,11 +381,16 @@ func destPath(dir, fileName string) (string, error) {
 			name = stem + " (" + strconv.Itoa(i) + ")" + ext
 		}
 		p := filepath.Join(dir, name)
-		if _, err := os.Stat(p); errors.Is(err, os.ErrNotExist) {
-			return p, nil
+		f, err := os.OpenFile(p, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
+		if errors.Is(err, os.ErrExist) {
+			continue
 		}
+		if err != nil {
+			return nil, "", err
+		}
+		return f, p, nil
 	}
-	return "", errors.New("no free name")
+	return nil, "", errors.New("no free name")
 }
 
 func randomID() string {

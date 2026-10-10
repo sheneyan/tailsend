@@ -201,3 +201,116 @@ func upload(t *testing.T, s *Server, session, file, token string, body []byte) i
 	s.Handler().ServeHTTP(rr, req)
 	return rr.Code
 }
+
+type acceptAfterDone struct{}
+
+func (acceptAfterDone) Wait(ctx context.Context, _ Incoming) (bool, error) {
+	<-ctx.Done()
+	return true, nil
+}
+
+func TestPrepareCanceledContextDoesNotAccept(t *testing.T) {
+	s := testServer(t, t.TempDir(), acceptAfterDone{})
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	rr := httptest.NewRecorder()
+	body := `{"info":{"alias":"Phone","fingerprint":"peer"},"files":{"f1":{"id":"f1","fileName":"a.png","size":1}}}`
+	req := httptest.NewRequest(http.MethodPost, "/api/localsend/v2/prepare-upload", bytes.NewBufferString(body))
+	s.Handler().ServeHTTP(rr, req.WithContext(ctx))
+	if rr.Code != 403 {
+		t.Fatalf("canceled %d", rr.Code)
+	}
+	s.Wait = scriptWait{accept: true}
+	code, resp := prepare(t, s, body)
+	if code != 200 || resp.SessionID == "" {
+		t.Fatalf("next %d %+v", code, resp)
+	}
+}
+
+func TestIdleTimeoutFreesSession(t *testing.T) {
+	s := testServer(t, t.TempDir(), scriptWait{accept: true})
+	s.IdleWait = 30 * time.Millisecond
+	meta := `{"info":{"alias":"Phone","fingerprint":"peer"},"files":{"f1":{"id":"f1","fileName":"a.png","size":1}}}`
+	code, first := prepare(t, s, meta)
+	if code != 200 || first.SessionID == "" {
+		t.Fatalf("accept %d %+v", code, first)
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	var nextCode int
+	var next PrepareResponse
+	for time.Now().Before(deadline) {
+		nextCode, next = prepare(t, s, meta)
+		if nextCode == 200 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if nextCode != 200 || next.SessionID == "" || next.SessionID == first.SessionID {
+		t.Fatalf("after idle %d %+v", nextCode, next)
+	}
+}
+
+func TestUploadSameFileTwice(t *testing.T) {
+	dir := t.TempDir()
+	s := testServer(t, dir, scriptWait{accept: true})
+	meta := `{"info":{"alias":"Phone","fingerprint":"peer"},"files":{"f1":{"id":"f1","fileName":"a.png","size":3},"f2":{"id":"f2","fileName":"b.png","size":3}}}`
+	code, resp := prepare(t, s, meta)
+	if code != 200 {
+		t.Fatal(code)
+	}
+	if code := upload(t, s, resp.SessionID, "f1", resp.Files["f1"], []byte("abc")); code != 200 {
+		t.Fatalf("first %d", code)
+	}
+	if code := upload(t, s, resp.SessionID, "f1", resp.Files["f1"], []byte("xyz")); code != 409 {
+		t.Fatalf("second %d", code)
+	}
+	got, err := os.ReadFile(filepath.Join(dir, "a.png"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != "abc" {
+		t.Fatalf("replaced %q", got)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "b.png")); !os.IsNotExist(err) {
+		t.Fatalf("other file: %v", err)
+	}
+}
+
+func TestUploadRejectsWrongSize(t *testing.T) {
+	dir := t.TempDir()
+	s := testServer(t, dir, scriptWait{accept: true})
+	code, resp := prepare(t, s, `{"info":{"alias":"Phone","fingerprint":"peer"},"files":{"f1":{"id":"f1","fileName":"a.png","size":2}}}`)
+	if code != 200 {
+		t.Fatal(code)
+	}
+	if code := upload(t, s, resp.SessionID, "f1", resp.Files["f1"], []byte("abc")); code != 400 {
+		t.Fatalf("extra %d", code)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "a.png")); !os.IsNotExist(err) {
+		t.Fatalf("extra left file: %v", err)
+	}
+	s.clearSession()
+
+	code, resp = prepare(t, s, `{"info":{"alias":"Phone","fingerprint":"peer"},"files":{"f1":{"id":"f1","fileName":"b.png","size":3}}}`)
+	if code != 200 {
+		t.Fatal(code)
+	}
+	if code := upload(t, s, resp.SessionID, "f1", resp.Files["f1"], []byte("ab")); code != 400 {
+		t.Fatalf("short %d", code)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "b.png")); !os.IsNotExist(err) {
+		t.Fatalf("short left file: %v", err)
+	}
+}
+
+func TestPrepareRejectsNegativeSize(t *testing.T) {
+	s := testServer(t, t.TempDir(), scriptWait{accept: true})
+	code, _ := prepare(t, s, `{"info":{"alias":"Phone","fingerprint":"peer"},"files":{"f1":{"id":"f1","fileName":"a.png","size":-1}}}`)
+	if code != 400 {
+		t.Fatalf("neg %d", code)
+	}
+	code, resp := prepare(t, s, `{"info":{"alias":"Phone","fingerprint":"peer"},"files":{"f1":{"id":"f1","fileName":"a.png","size":1}}}`)
+	if code != 200 || resp.SessionID == "" {
+		t.Fatalf("next %d %+v", code, resp)
+	}
+}
