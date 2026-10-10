@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Desktop LocalSend
+
+- The open GUI is a LocalSend v2 peer on the LAN (announce, register,
+  prepare-upload, upload, cancel). Tailscale discovery is unchanged.
+- Incoming files prompt by default. Auto-save is a checkbox.
+- Port 53317 already in use is shown. The other process is left alone.
+
 ### Phase 2 — Android sender
 
 - `android/`: paste pairing JSON, pick files, PUT `{peerAPIURL}/v0/put/<file>`

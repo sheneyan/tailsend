@@ -72,8 +72,14 @@ back to scanning the LAN subnet on TCP 53317.
 
 A tailnet is WireGuard unicast (or DERP). Multicast and LAN subnet scans do
 not cross it. Tailsend therefore does **not** search for “online Tailsend
-apps,” does not listen on a Tailsend-specific port, and does not embed a
-second node to get a netmap.
+apps,” and does not embed a second node to get a netmap. The Taildrop path
+does not listen on a Tailsend-specific port.
+
+The desktop GUI process, while open, additionally binds LocalSend's
+default HTTPS port `53317` and announces on UDP `224.0.0.167:53317`.
+That is a second protocol in `internal/localsend`. It does not carry
+Taildrop, does not scan the LAN subnet, and stops when the window
+closes. Android and the CLI do not open this port.
 
 | Surface | How the named-device grid is filled |
 |---|---|
