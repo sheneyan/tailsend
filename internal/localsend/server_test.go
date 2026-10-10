@@ -6,10 +6,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 )
@@ -196,8 +198,13 @@ func prepare(t *testing.T, s *Server, body string) (int, PrepareResponse) {
 
 func upload(t *testing.T, s *Server, session, file, token string, body []byte) int {
 	t.Helper()
+	return uploadReader(t, s, session, file, token, bytes.NewReader(body))
+}
+
+func uploadReader(t *testing.T, s *Server, session, file, token string, body io.Reader) int {
+	t.Helper()
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/api/localsend/v2/upload?sessionId="+session+"&fileId="+file+"&token="+token, bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/api/localsend/v2/upload?sessionId="+session+"&fileId="+file+"&token="+token, body)
 	s.Handler().ServeHTTP(rr, req)
 	return rr.Code
 }
@@ -300,6 +307,109 @@ func TestUploadRejectsWrongSize(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dir, "b.png")); !os.IsNotExist(err) {
 		t.Fatalf("short left file: %v", err)
+	}
+}
+
+type gapReader struct {
+	data []byte
+	gap  time.Duration
+	off  int
+}
+
+func (g *gapReader) Read(p []byte) (int, error) {
+	if g.off >= len(g.data) {
+		return 0, io.EOF
+	}
+	if g.off > 0 {
+		time.Sleep(g.gap)
+	}
+	p[0] = g.data[g.off]
+	g.off++
+	return 1, nil
+}
+
+func TestSlowUploadKeepsSession(t *testing.T) {
+	dir := t.TempDir()
+	s := testServer(t, dir, scriptWait{accept: true})
+	s.IdleWait = 40 * time.Millisecond
+	payload := []byte("abcdef")
+	code, resp := prepare(t, s, `{"info":{"alias":"Phone","fingerprint":"peer"},"files":{"f1":{"id":"f1","fileName":"a.png","size":6}}}`)
+	if code != 200 {
+		t.Fatal(code)
+	}
+	if code := uploadReader(t, s, resp.SessionID, "f1", resp.Files["f1"], &gapReader{data: payload, gap: 10 * time.Millisecond}); code != 200 {
+		t.Fatalf("slow %d", code)
+	}
+	got, err := os.ReadFile(filepath.Join(dir, "a.png"))
+	if err != nil || string(got) != string(payload) {
+		t.Fatalf("file %q %v", got, err)
+	}
+}
+
+type blockAfterReader struct {
+	first  []byte
+	used   bool
+	closed chan struct{}
+	mu     sync.Mutex
+}
+
+func newBlockAfterReader(first []byte) *blockAfterReader {
+	return &blockAfterReader{first: first, closed: make(chan struct{})}
+}
+
+func (b *blockAfterReader) Read(p []byte) (int, error) {
+	b.mu.Lock()
+	if !b.used {
+		b.used = true
+		n := copy(p, b.first)
+		b.mu.Unlock()
+		return n, nil
+	}
+	b.mu.Unlock()
+	<-b.closed
+	return 0, io.ErrClosedPipe
+}
+
+func (b *blockAfterReader) Close() error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	select {
+	case <-b.closed:
+	default:
+		close(b.closed)
+	}
+	return nil
+}
+
+func TestIdleDuringUploadDropsPartial(t *testing.T) {
+	dir := t.TempDir()
+	s := testServer(t, dir, scriptWait{accept: true})
+	s.IdleWait = 40 * time.Millisecond
+	meta := `{"info":{"alias":"Phone","fingerprint":"peer"},"files":{"f1":{"id":"f1","fileName":"a.png","size":3},"f2":{"id":"f2","fileName":"b.png","size":4}}}`
+	code, resp := prepare(t, s, meta)
+	if code != 200 {
+		t.Fatal(code)
+	}
+	if code := upload(t, s, resp.SessionID, "f1", resp.Files["f1"], []byte("abc")); code != 200 {
+		t.Fatalf("first %d", code)
+	}
+	start := time.Now()
+	code = uploadReader(t, s, resp.SessionID, "f2", resp.Files["f2"], newBlockAfterReader([]byte("xy")))
+	if time.Since(start) > time.Second {
+		t.Fatalf("upload blocked for %s", time.Since(start))
+	}
+	if code != 403 {
+		t.Fatalf("stalled %d", code)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "a.png")); !os.IsNotExist(err) {
+		t.Fatalf("saved left: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "b.png")); !os.IsNotExist(err) {
+		t.Fatalf("partial left: %v", err)
+	}
+	code, next := prepare(t, s, `{"info":{"alias":"Phone","fingerprint":"peer"},"files":{"f1":{"id":"f1","fileName":"c.png","size":1}}}`)
+	if code != 200 || next.SessionID == "" {
+		t.Fatalf("next %d %+v", code, next)
 	}
 }
 

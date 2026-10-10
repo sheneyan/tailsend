@@ -62,15 +62,18 @@ type Server struct {
 }
 
 type recvSession struct {
-	id      string
-	alias   string
-	tokens  map[string]string
-	metas   map[string]FileMeta
-	paths   map[string]string
-	busy    map[string]bool
-	got     int
-	idle    *time.Timer
-	idleGen int
+	id         string
+	alias      string
+	tokens     map[string]string
+	metas      map[string]FileMeta
+	paths      map[string]string
+	busy       map[string]bool
+	got        int
+	idle       *time.Timer
+	idleGen    int
+	copyCancel context.CancelFunc
+	copyGen    int
+	body       io.ReadCloser
 }
 
 func (s *Server) clearSession() {
@@ -104,16 +107,47 @@ func (s *Server) armIdleLocked(sess *recvSession) {
 	s.dropSessionLocked(sess)
 	gen := sess.idleGen
 	sess.idle = time.AfterFunc(s.idleDuration(), func() {
-		s.mu.Lock()
-		defer s.mu.Unlock()
-		if s.session != sess || sess.idleGen != gen {
-			return
-		}
-		for _, p := range sess.paths {
-			os.Remove(p)
-		}
-		s.session = nil
+		s.expireIdle(sess, gen)
 	})
+}
+
+// expireIdle drops sess when a full IdleWait passed with no new bytes.
+func (s *Server) expireIdle(sess *recvSession, gen int) {
+	s.mu.Lock()
+	if s.session != sess || sess.idleGen != gen {
+		s.mu.Unlock()
+		return
+	}
+	paths := make([]string, len(sess.paths))
+	i := 0
+	for _, p := range sess.paths {
+		paths[i] = p
+		i++
+	}
+	cancel, body := sess.copyCancel, sess.body
+	sess.copyGen++
+	sess.copyCancel = nil
+	sess.body = nil
+	s.dropSessionLocked(sess)
+	s.session = nil
+	s.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+	if body != nil {
+		_ = body.Close()
+	}
+	for _, p := range paths {
+		_ = os.Remove(p)
+	}
+}
+
+func (s *Server) noteActivity(sess *recvSession) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.session == sess {
+		s.armIdleLocked(sess)
+	}
 }
 
 func (s *Server) clearBusy(sess *recvSession, fileID string) {
@@ -265,7 +299,6 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	sess.busy[fileID] = true
 	meta := sess.metas[fileID]
-	s.armIdleLocked(sess)
 	s.mu.Unlock()
 
 	f, dest, err := createDest(s.SaveDir, meta.FileName)
@@ -274,12 +307,45 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		s.failUpload(w)
 		return
 	}
+	ctx, cancel := context.WithCancel(r.Context())
+	s.mu.Lock()
+	if s.session != sess {
+		s.mu.Unlock()
+		cancel()
+		_ = f.Close()
+		_ = os.Remove(dest)
+		http.Error(w, "canceled", http.StatusForbidden)
+		return
+	}
+	sess.copyGen++
+	copyGen := sess.copyGen
+	sess.copyCancel = cancel
+	sess.body = r.Body
+	s.mu.Unlock()
+	defer func() {
+		s.mu.Lock()
+		if sess.copyGen == copyGen {
+			sess.copyCancel = nil
+			sess.body = nil
+		}
+		s.mu.Unlock()
+		cancel()
+	}()
 	h := sha256.New()
-	n, copyErr := io.Copy(io.MultiWriter(f, h), io.LimitReader(r.Body, meta.Size))
+	n, copyErr := io.Copy(io.MultiWriter(f, h), io.LimitReader(&activityReader{ctx: ctx, r: r.Body, s: s, sess: sess}, meta.Size))
 	closeErr := f.Close()
 	if copyErr != nil || closeErr != nil {
-		os.Remove(dest)
-		s.clearBusy(sess, fileID)
+		_ = os.Remove(dest)
+		s.mu.Lock()
+		canceled := s.session != sess
+		if !canceled {
+			delete(sess.busy, fileID)
+		}
+		s.mu.Unlock()
+		if canceled {
+			http.Error(w, "canceled", http.StatusForbidden)
+			return
+		}
 		s.failUpload(w)
 		return
 	}
@@ -343,6 +409,31 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) failUpload(w http.ResponseWriter) {
 	http.Error(w, "write", http.StatusInternalServerError)
+}
+
+// activityReader resets the idle clock only when a Read returns bytes.
+// A canceled context ends the copy after IdleWait with no new bytes.
+type activityReader struct {
+	ctx  context.Context
+	r    io.Reader
+	s    *Server
+	sess *recvSession
+}
+
+func (a *activityReader) Read(p []byte) (int, error) {
+	if err := a.ctx.Err(); err != nil {
+		return 0, err
+	}
+	n, err := a.r.Read(p)
+	if n > 0 {
+		a.s.noteActivity(a.sess)
+	}
+	if err == nil {
+		if cerr := a.ctx.Err(); cerr != nil {
+			return n, cerr
+		}
+	}
+	return n, err
 }
 
 func (s *Server) handleCancel(w http.ResponseWriter, r *http.Request) {
