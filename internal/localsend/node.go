@@ -32,14 +32,16 @@ type State struct {
 }
 
 type Node struct {
-	status   string
-	cfg      Config
-	settings Settings
-	table    *Table
-	srv      *Server
-	httpSrv  *http.Server
-	udp      *net.UDPConn
-	cancel   context.CancelFunc
+	status    string
+	cfg       Config
+	settings  Settings
+	table     *Table
+	srv       *Server
+	httpSrv   *http.Server
+	udp       *net.UDPConn
+	runCtx    context.Context
+	cancel    context.CancelFunc
+	closeOnce sync.Once
 
 	mu      sync.Mutex
 	pending map[string]chan bool
@@ -105,9 +107,10 @@ func StartWith(ctx context.Context, cfg Config, ln net.Listener, udp *net.UDPCon
 	}
 	tlsLn := tls.NewListener(ln, &tls.Config{Certificates: []tls.Certificate{cert}})
 	n.httpSrv = &http.Server{Handler: n.srv.Handler(), ReadHeaderTimeout: 10 * time.Second}
-	go n.httpSrv.Serve(tlsLn)
 	runCtx, cancel := context.WithCancel(ctx)
+	n.runCtx = runCtx
 	n.cancel = cancel
+	go n.httpSrv.Serve(tlsLn)
 	if udp != nil && listenErr == nil {
 		n.udp = udp
 		go ReadAnnounce(udp, n.table, info, func(ip string, port int) {
@@ -133,8 +136,14 @@ func (n *Node) Wait(ctx context.Context, in Incoming) (bool, error) {
 	if n.cfg.OnOffer != nil {
 		n.cfg.OnOffer(in)
 	}
+	var nodeDone <-chan struct{}
+	if n.runCtx != nil {
+		nodeDone = n.runCtx.Done()
+	}
 	select {
 	case <-ctx.Done():
+		return false, nil
+	case <-nodeDone:
 		return false, nil
 	case ok := <-ch:
 		return ok, nil
@@ -202,17 +211,22 @@ func (n *Node) Send(ctx context.Context, fingerprint string, paths []string, ask
 }
 
 func (n *Node) Close() {
-	if n.cancel != nil {
-		n.cancel()
-	}
-	if n.httpSrv != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		_ = n.httpSrv.Shutdown(ctx)
-		cancel()
-	}
-	if n.udp != nil {
-		_ = n.udp.Close()
-	}
+	n.closeOnce.Do(func() {
+		if n.cancel != nil {
+			n.cancel()
+		}
+		if n.httpSrv != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			err := n.httpSrv.Shutdown(ctx)
+			cancel()
+			if err != nil {
+				_ = n.httpSrv.Close()
+			}
+		}
+		if n.udp != nil {
+			_ = n.udp.Close()
+		}
+	})
 }
 
 func (n *Node) announceLoop(ctx context.Context, info Info) {
