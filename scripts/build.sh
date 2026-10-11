@@ -27,6 +27,7 @@ Windows PowerShell（仓库根目录）:
   CLI     make cli          |  make cli-all
   mac GUI cd desktop && make dmg
   Linux   cd desktop && sh ./pack-linux.sh
+  Omarchy cd desktop && sh ./pack-omarchy.sh
   Win GUI cd desktop; powershell -ExecutionPolicy Bypass -File .\pack-windows.ps1
   Android ANDROID_HOME=... ./android/gradlew -p android :app:assembleDebug
           真机: 同上 :app:installDebug

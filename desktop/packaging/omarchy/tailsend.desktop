@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Tailsend
+Comment=Send files over Tailscale Taildrop
+Exec=/usr/bin/tailsend-gui
+Icon=tailsend
+Terminal=false
+Categories=Network;FileTransfer;
+StartupWMClass=Tailsend

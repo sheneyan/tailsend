@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Omarchy
+
+- `desktop/pack-omarchy.sh` builds a pacman package (`tailsend-gui` in the
+  menu, `tailsend` on `PATH`). Depends on Arch `webkit2gtk-4.1`.
+
 ### Desktop LocalSend
 
 - The open GUI is a LocalSend v2 peer on the LAN (announce, register,

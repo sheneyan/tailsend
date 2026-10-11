@@ -87,7 +87,7 @@ Windows: `powershell -ExecutionPolicy Bypass -File .\scripts\build.ps1`
 `go install github.com/sheneyan/tailsend/cmd/tailsend@latest` still works for
 the CLI. The GUI is a separate CGO binary and **cannot** be cross-compiled;
 `build.sh gui` runs `make dmg` / `pack-linux.sh` / `pack-windows.ps1` on this
-OS.
+OS. Omarchy uses `cd desktop && sh ./pack-omarchy.sh` (a pacman package).
 
 See [docs/desktop.md](docs/desktop.md) **Release packages**. Notarization and
 Authenticode: [docs/signing.md](docs/signing.md).

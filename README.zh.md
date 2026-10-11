@@ -79,7 +79,8 @@ Windows：`powershell -ExecutionPolicy Bypass -File .\scripts\build.ps1`
 
 CLI 仍可用 `go install github.com/sheneyan/tailsend/cmd/tailsend@latest`。
 GUI 带 CGO，**不能**交叉编译；`build.sh gui` 会在当前系统跑 `make dmg` /
-`pack-linux.sh` / `pack-windows.ps1`。
+`pack-linux.sh` / `pack-windows.ps1`。Omarchy 另打 pacman 包：
+`cd desktop && sh ./pack-omarchy.sh`。
 
 见 [docs/desktop.md](docs/desktop.md) 的 **Release packages**。公证 / Authenticode：
 [docs/signing.md](docs/signing.md)。

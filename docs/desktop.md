@@ -20,8 +20,22 @@ the cheat sheet. `./scripts/build.sh gui` packs the GUI for **this** OS.
 | Windows | `cd desktop; powershell -ExecutionPolicy Bypass -File .\pack-windows.ps1` |
 | Linux (Ubuntu 24 / webkit2gtk 4.1) | `cd desktop && sh ./pack-linux.sh` |
 | Linux (webkit2gtk 4.0 only) | `cd desktop && TAGS=production sh ./pack-linux.sh` |
+| Omarchy | `cd desktop && sh ./pack-omarchy.sh` |
 
 Equivalent: `make run` on macOS; on Ubuntu 24 `make TAGS=production,webkit2_41 run`.
+
+### Omarchy
+
+`pack-linux.sh` is a tarball. Omarchy's menu needs a pacman package.
+On the Omarchy machine:
+
+```bash
+sudo pacman -S --needed go gcc pkgconf gtk3 webkit2gtk-4.1
+cd desktop && sh ./pack-omarchy.sh
+sudo pacman -U dist-release/tailsend-0.1.0-1-*.pkg.tar.zst
+```
+
+Use the repo package `webkit2gtk-4.1`. The AUR package named `webkit2gtk` is the old 4.0 library and will not satisfy this build. After install, Super+Space finds **Tailsend**. The GUI command is `tailsend-gui`; the CLI is `tailsend`.
 
 ### Do / do not
 

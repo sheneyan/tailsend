@@ -1,0 +1,19 @@
+# Local pacman package for Omarchy. pack-omarchy.sh fills this directory
+# and runs makepkg. Depends on Arch's webkit2gtk-4.1, not the AUR webkit2gtk.
+pkgname=tailsend
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Send files over Tailscale Taildrop'
+arch=('x86_64' 'aarch64')
+url='https://github.com/sheneyan/tailsend'
+license=('MIT')
+depends=('gtk3' 'webkit2gtk-4.1')
+optdepends=('tailscale: official node the GUI drives')
+options=('!debug')
+
+package() {
+	install -Dm755 "$startdir/Tailsend" "$pkgdir/usr/bin/tailsend-gui"
+	install -Dm755 "$startdir/tailsend-cli" "$pkgdir/usr/bin/tailsend"
+	install -Dm644 "$startdir/tailsend.desktop" "$pkgdir/usr/share/applications/tailsend.desktop"
+	install -Dm644 "$startdir/appicon.png" "$pkgdir/usr/share/icons/hicolor/512x512/apps/tailsend.png"
+}
