@@ -81,6 +81,29 @@
             <span class="meta">{{ t.reason || "not a Taildrop target" }}</span>
           </div>
         </div>
+        <div class="section-label lan-label">On this network</div>
+        <p class="hint" v-if="lanStatus">{{ lanStatus }}</p>
+        <label class="hint lan-check">
+          <input type="checkbox" :checked="autoSave" @change="toggleAutoSave" />
+          Save incoming files without asking
+        </label>
+        <div v-if="!lanPeers.length" class="empty">
+          No LocalSend devices yet. Open LocalSend on the phone, on this Wi-Fi.
+        </div>
+        <div class="grid">
+          <button
+            v-for="p in lanPeers"
+            :key="p.fingerprint"
+            class="card"
+            :class="{ busy: sending && sendingTo === p.fingerprint }"
+            :disabled="sending"
+            @click="sendLan(p)"
+          >
+            <span class="avatar"><OsIcon :os="p.deviceType === 'mobile' ? 'android' : 'mac'" /></span>
+            <span class="name">{{ p.alias }}</span>
+            <span class="meta">LocalSend</span>
+          </button>
+        </div>
       </section>
     </main>
 
@@ -121,6 +144,28 @@
         </details>
       </div>
     </div>
+    <div class="modal" v-if="offer">
+      <div class="sheet">
+        <div class="drawer-h"><strong>{{ offer.alias }} wants to send</strong></div>
+        <ul class="inbox-list">
+          <li v-for="f in offer.files" :key="f.id">{{ f.fileName }} <span class="muted">{{ fmtSize(f.size) }}</span></li>
+        </ul>
+        <div class="row-btns">
+          <button class="primary" @click="acceptOffer">Save to Downloads</button>
+          <button class="ghost" @click="declineOffer">Decline</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal" v-if="pinAsk">
+      <div class="sheet">
+        <div class="drawer-h"><strong>PIN for {{ pinAsk.alias }}</strong></div>
+        <input v-model="pinValue" class="pin" />
+        <div class="row-btns">
+          <button class="primary" @click="submitPin">Send</button>
+          <button class="ghost" @click="pinAsk = null">Cancel</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -137,6 +182,11 @@ import {
   PairingJSON,
   PairingQR,
   Platform,
+  LanState,
+  LanSetAutoSave,
+  LanAccept,
+  LanDecline,
+  SendLan,
 } from "../wailsjs/go/main/App";
 import { EventsOn, OnFileDrop, OnFileDropOff } from "../wailsjs/runtime/runtime";
 
@@ -155,9 +205,18 @@ const receiving = ref(false);
 const platform = ref("");
 const canDrop = computed(() => platform.value === "darwin" || platform.value === "linux");
 const landed = ref(null);
+const lanPeers = ref([]);
+const lanStatus = ref("");
+const autoSave = ref(false);
+const offer = ref(null);
+const pinAsk = ref(null);
+const pinValue = ref("");
 
 let timer = 0;
 let offProgress = () => {};
+let offPeers = () => {};
+let offOffer = () => {};
+let offSaved = () => {};
 let offDrop = () => {};
 
 function byName(a, b) {
@@ -380,6 +439,80 @@ async function sendTo(t) {
   }
 }
 
+async function toggleAutoSave(ev) {
+  autoSave.value = ev.target.checked;
+  await LanSetAutoSave(autoSave.value);
+}
+async function acceptOffer() {
+  const id = offer.value?.sessionID || offer.value?.SessionID;
+  offer.value = null;
+  await LanAccept(id);
+}
+async function declineOffer() {
+  const id = offer.value?.sessionID || offer.value?.SessionID;
+  offer.value = null;
+  await LanDecline(id);
+}
+async function sendLan(p) {
+  if (!files.value.length) {
+    await pickFiles();
+  }
+  if (!files.value.length) return;
+  sending.value = true;
+  sendingTo.value = p.fingerprint;
+  landed.value = null;
+  progress.value = { name: "Starting…", pct: 0, stateline: "" };
+  const paths = files.value.map((f) => f.path);
+  try {
+    await SendLan(p.fingerprint, paths, "");
+    files.value = [];
+    progress.value = { name: "Sent to " + p.alias, pct: 100, stateline: "done" };
+    landed.value = {
+      title: `Sent to ${p.alias}`,
+      body: "Their LocalSend app saves the files.",
+      commands: [],
+    };
+  } catch (e) {
+    const msg = String(e);
+    if (msg.toLowerCase().includes("pin required")) {
+      sending.value = false;
+      pinAsk.value = { alias: p.alias, fingerprint: p.fingerprint, paths };
+      pinValue.value = "";
+      return;
+    }
+    progress.value = { name: "Failed", pct: 0, stateline: msg };
+  } finally {
+    if (!pinAsk.value) {
+      sending.value = false;
+      sendingTo.value = "";
+    }
+  }
+}
+async function submitPin() {
+  const ask = pinAsk.value;
+  const pin = pinValue.value;
+  pinAsk.value = null;
+  sending.value = true;
+  sendingTo.value = ask.fingerprint;
+  try {
+    await SendLan(ask.fingerprint, ask.paths, pin);
+    files.value = [];
+    const peer = lanPeers.value.find((x) => x.fingerprint === ask.fingerprint);
+    const alias = peer?.alias || ask.alias;
+    progress.value = { name: "Sent to " + alias, pct: 100, stateline: "done" };
+    landed.value = {
+      title: `Sent to ${alias}`,
+      body: "Their LocalSend app saves the files.",
+      commands: [],
+    };
+  } catch (e) {
+    progress.value = { name: "Failed", pct: 0, stateline: String(e) };
+  } finally {
+    sending.value = false;
+    sendingTo.value = "";
+  }
+}
+
 async function openPair() {
   pairOpen.value = true;
   try {
@@ -424,6 +557,10 @@ onMounted(async () => {
     recvDir.value = await DefaultRecvDir();
   } catch (_) {}
   await refresh();
+  const st = await LanState();
+  lanStatus.value = st.status || "";
+  autoSave.value = !!st.autoSave;
+  lanPeers.value = st.peers || [];
   timer = window.setInterval(refresh, 15000);
   offProgress = EventsOn("progress", (p) => {
     const total = p.total > 0 ? p.total : 0;
@@ -433,6 +570,15 @@ onMounted(async () => {
       pct,
       stateline: p.state === "failed" ? p.err : p.state,
     };
+  });
+  offPeers = EventsOn("lan-peers", (peers) => {
+    lanPeers.value = peers || [];
+  });
+  offOffer = EventsOn("lan-offer", (inOffer) => {
+    offer.value = inOffer;
+  });
+  offSaved = EventsOn("lan-saved", (p) => {
+    landed.value = { title: `Saved ${p.count} file(s) from ${p.alias}`, body: "", commands: [] };
   });
   offDrop = EventsOn("files-dropped", (...args) => addPaths(...args));
   if (canDrop.value) {
@@ -445,6 +591,9 @@ onMounted(async () => {
 onUnmounted(() => {
   if (timer) clearInterval(timer);
   offProgress();
+  offPeers();
+  offOffer();
+  offSaved();
   offDrop();
   if (canDrop.value) {
     OnFileDropOff();
@@ -566,6 +715,14 @@ onUnmounted(() => {
   text-transform: uppercase;
   color: var(--muted);
   margin-bottom: 10px;
+}
+.lan-label {
+  margin-top: 18px;
+}
+.pin {
+  width: 100%;
+  margin: 8px 0;
+  padding: 8px;
 }
 .grid-wrap {
   overflow: auto;

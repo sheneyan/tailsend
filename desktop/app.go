@@ -12,6 +12,7 @@ import (
 	"github.com/skip2/go-qrcode"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
+	"github.com/sheneyan/tailsend/internal/localsend"
 	"github.com/sheneyan/tailsend/internal/tsdrop"
 )
 
@@ -26,8 +27,10 @@ type Snapshot struct {
 
 // App is the Wails backend.
 type App struct {
-	ctx    context.Context
-	client *tsdrop.Client
+	ctx      context.Context
+	client   *tsdrop.Client
+	lan      *localsend.Node
+	outbound int32
 }
 
 func NewApp(c *tsdrop.Client) *App {
@@ -52,6 +55,7 @@ func (a *App) startup(ctx context.Context) {
 	if goruntime.GOOS == "windows" {
 		scheduleWindowsWindowChrome()
 	}
+	a.startLAN()
 }
 
 func (a *App) emit(name string, data ...interface{}) {
@@ -116,6 +120,10 @@ func (a *App) SendTo(stableID string, paths []string) error {
 		}
 		items = append(items, tsdrop.SendItem{Path: p})
 	}
+	if !a.beginSend() {
+		return errBusySend
+	}
+	defer a.endSend()
 	return a.client.Send(a.requestCtx(), stableID, items, func(p tsdrop.Progress) {
 		a.emit("progress", p)
 	})

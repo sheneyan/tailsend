@@ -177,6 +177,12 @@ Linux 上 `tailscaled` 常以 root 运行，收件箱文件也归 root，可能�
 | 文件夹 | 原生目录树 | 先 zip 再发 |
 | 接收确认 | 应用内 | 跟官方 Taildrop 一样 |
 
+桌面窗口开着时，它同时是局域网里的 LocalSend 节点（UDP `224.0.0.167:53317`，
+HTTPS 端口 `53317`）。手机上的官方 LocalSend 不用加入 Tailscale 也能看见这台电脑。
+这块列表和 tailnet 设备是分开的。收到的文件先询问，再存到下载目录。
+勾选 **Save incoming files without asking** 后不再询问。
+53317 端口已被占用时，窗口会写明，并且不会对外广播。
+
 发出去的文件和系统里「分享 → Tailscale」或 `tailscale file cp` 是同一条管道。
 
 ## 排障

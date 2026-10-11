@@ -25,3 +25,18 @@ export function PairingQR() {
 export function Platform() {
   return window.go.main.App.Platform();
 }
+export function LanState() {
+  return window.go.main.App.LanState();
+}
+export function LanSetAutoSave(v) {
+  return window.go.main.App.LanSetAutoSave(v);
+}
+export function LanAccept(sessionID) {
+  return window.go.main.App.LanAccept(sessionID);
+}
+export function LanDecline(sessionID) {
+  return window.go.main.App.LanDecline(sessionID);
+}
+export function SendLan(fingerprint, paths, pin) {
+  return window.go.main.App.SendLan(fingerprint, paths, pin);
+}

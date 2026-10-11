@@ -28,6 +28,7 @@ func main() {
 		},
 		BackgroundColour: &options.RGBA{R: 17, G: 19, B: 24, A: 255},
 		OnStartup:        app.startup,
+		OnShutdown:       app.shutdownLAN,
 		Bind:             []interface{}{app},
 		DragAndDrop: &options.DragAndDrop{
 			// Windows: click-to-pick only (Explorer drop is in TODO.md).

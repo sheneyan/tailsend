@@ -188,6 +188,13 @@ You may need `sudo tailsend recv .`.
 | Folders | Native tree | Zip, then send |
 | Receive confirm | In-app | Whatever Tailscale already does |
 
+While the desktop window is open it is also a LocalSend peer on this LAN
+(UDP `224.0.0.167:53317`, HTTPS port `53317`). Phones running official
+LocalSend see this computer without joining Tailscale. The nearby list is
+separate from the tailnet grid. Incoming files ask before they are saved
+to Downloads. **Save incoming files without asking** turns that prompt off.
+If port 53317 is already taken, the window says so and does not announce.
+
 Tailsend is interoperable with official Taildrop: a file you send lands in
 the same place as **Share → Tailscale** or `tailscale file cp`.
 
